@@ -7,6 +7,7 @@ project(${APPLICATION_NAME} VERSION 1.0.0)
 # YOU WILL NEED TO ADD YOUR LAYER FILES HERE
 set (PROJECT_HEADER_FILES
 
+    ./application/include/triangle.hpp
 )
 set (PROJECT_SOURCE_FILES
     ./application/src/main.cpp
