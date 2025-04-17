@@ -58,6 +58,7 @@ private:
 		// Initialize Vulkan
 		createInstance();
 		setupDebugMessenger();
+		pickPhysicalDevice();
 	}
 	void mainLoop() {
 		// Main loop
@@ -173,5 +174,31 @@ private:
 	}
 
 
+	void pickPhysicalDevice() {
+		VkPhysicalDevice physicalDevice = VK_NULL_HANDLE; // create a physical device handle
 
+		uint32_t deviceCount = 0;
+		vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr); // get the number of devices
+		if (deviceCount == 0) {
+			throw std::runtime_error("failed to find GPUs with Vulkan support!");
+		}
+		std::vector<VkPhysicalDevice> devices(deviceCount);
+		vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+		for (const auto& device : devices) {
+			if (isDeviceSuitable(device)) {
+				physicalDevice = device;
+				break;
+			}
+		}
+		if (physicalDevice == VK_NULL_HANDLE) {
+			throw std::runtime_error("failed to find a suitable GPU!");
+		}
+	}
+
+	bool isDeviceSuitable(VkPhysicalDevice device) // can be used to only allow certain devices based on capabilities
+	{ 
+		/*VkPhysicalDeviceProperties deviceProperties;
+		vkGetPhysicalDeviceProperties(device, &deviceProperties);*/
+		return true;
+	}
 };
