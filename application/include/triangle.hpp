@@ -2,6 +2,7 @@
 #include <GLFW/glfw3.h> // GLFW header
 #include <vulkan/vulkan.h>
 #include <vector>
+#include <optional>
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
@@ -14,6 +15,12 @@ const bool enableValidationLayers = false; // disable validation layers in relea
 const bool enableValidationLayers = true; // enable validation layers in debug mode
 #endif
 
+struct QueueFamilyIndices {
+	std::optional<uint32_t> graphicsFamily;
+	bool isComplete() {
+		return graphicsFamily.has_value(); // std::optional functionality
+	}
+};
 
 VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) {
 	auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
@@ -197,8 +204,29 @@ private:
 
 	bool isDeviceSuitable(VkPhysicalDevice device) // can be used to only allow certain devices based on capabilities
 	{ 
-		/*VkPhysicalDeviceProperties deviceProperties;
-		vkGetPhysicalDeviceProperties(device, &deviceProperties);*/
-		return true;
+		QueueFamilyIndices indices = findQueueFamilies(device);
+		return indices.isComplete(); // std::optional functionality
+	}
+
+	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) {
+		QueueFamilyIndices indices;
+
+		uint32_t queueFamilyCount = 0;
+		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr); // get the number of queue families
+		
+		std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data()); // get the queue families
+		
+		int i = 0;
+		for (const auto& queueFamily : queueFamilies) { // loop through the queue families
+			if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) { // check if the family supports graphics
+				indices.graphicsFamily = i; // set the graphics family
+			}
+			if (indices.isComplete()) {
+				break; 
+			}
+			i++;
+		}
+		return indices;
 	}
 };
