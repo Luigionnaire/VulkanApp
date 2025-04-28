@@ -79,7 +79,8 @@ private:
 	VkFormat swapChainImageFormat;
 	VkExtent2D swapChainExtent; 
 
-	VkPipelineLayout pipelineLayout; // pipeline layout
+	VkRenderPass renderPass;
+	VkPipelineLayout pipelineLayout;
 
 	// devices
 	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE; 
@@ -102,6 +103,7 @@ private:
 		createLogicalDevice();
 		createSwapChain();
 		createImageViews();
+		createRenderPass();
 		createGraphicsPipeline();
 	}
 	void mainLoop() {
@@ -112,6 +114,7 @@ private:
 	}
 	void cleanup() {
 		vkDestroyPipelineLayout(device, pipelineLayout, nullptr); 
+		vkDestroyRenderPass(device, renderPass, nullptr);
 		for (auto imageView : swapChainImageViews) 
 		{ // destroy image views
 			vkDestroyImageView(device, imageView, nullptr);
@@ -437,6 +440,41 @@ private:
 
 		vkDestroyShaderModule(device, fragShaderModule, nullptr);
 		vkDestroyShaderModule(device, vertShaderModule, nullptr);
+	}
+	void createRenderPass() {
+		VkAttachmentDescription colorAttachment{};
+		colorAttachment.format = swapChainImageFormat;
+		colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT; // 1 sample per pixel
+		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR; // clear the attachment
+		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE; // store the attachment
+
+		colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE; // no stencil
+		colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE; // no stencil
+
+		colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED; //layout before the render pass (irrelevant)
+		colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; // ready the image for presentation
+
+		//subpass
+		VkAttachmentReference colorAttachmentRef{};
+		colorAttachmentRef.attachment = 0;
+		colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+		VkSubpassDescription subpass{};
+		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS; // specify type of subpass
+		subpass.colorAttachmentCount = 1;
+		subpass.pColorAttachments = &colorAttachmentRef;
+
+		VkRenderPassCreateInfo renderPassInfo{};
+		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+		renderPassInfo.attachmentCount = 1;
+		renderPassInfo.pAttachments = &colorAttachment;
+		renderPassInfo.subpassCount = 1;
+		renderPassInfo.pSubpasses = &subpass;
+		
+		if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS)
+		{
+			throw std::runtime_error("failed to create render pass!"); 
+		}
 	}
 
 	bool isDeviceSuitable(VkPhysicalDevice device) // can be used to only allow certain devices based on capabilities
