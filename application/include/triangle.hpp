@@ -528,7 +528,7 @@ private:
 			if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &swapChainFramebuffers[i]) != VK_SUCCESS) {
 				throw std::runtime_error("failed to create framebuffer!");
 			}
-
+		}
 	}
 
 	bool isDeviceSuitable(VkPhysicalDevice device) // can be used to only allow certain devices based on capabilities
