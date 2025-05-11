@@ -8,6 +8,8 @@
 #include <fstream>
 #include <glm/glm.hpp>
 #include <array>
+#include "window.hpp"
+#include <memory>
 
 const int MAX_FRAMES_IN_FLIGHT = 2; // frames processed concurrently
 const uint32_t WIDTH = 800;
@@ -103,14 +105,15 @@ public:
 		cleanup();
 	}
 private:
-	GLFWwindow* window;
+	GLFWwindow* window; // window
+	std::shared_ptr<Window> m_window; // window object
 	VkInstance instance;
 
 	//debug callback
 	VkDebugUtilsMessengerEXT debugMessenger; 
 
 	//window surface
-	VkSurfaceKHR surface;
+	VkSurfaceKHR surface; // window
 	VkQueue presentQueue;
 
 	//swapchain
@@ -148,19 +151,13 @@ private:
 	uint32_t currentFrame = 0;
 
 	void initWindow() {
-		//Initialise GLFW
-		glfwInit();
-		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);  //create a window without OpenGL context
-		glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE); // disable resizing
-		window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan App", nullptr, nullptr);
-		glfwSetWindowUserPointer(window, this);
-		glfwSetFramebufferSizeCallback(window, framebufferResizeCallback); 
+		m_window = std::make_shared<Window>(); // create a window object
 	}
 	void initVulkan()  {
 		// Initialize Vulkan
 		createInstance();
 		setupDebugMessenger();
-		createSurface();
+		createSurface(); // window
 		pickPhysicalDevice();
 		createLogicalDevice();
 		createSwapChain();
@@ -176,7 +173,7 @@ private:
 	}
 	void mainLoop() {
 		// Main loop
-		while (!glfwWindowShouldClose(window)) {
+		while (!glfwWindowShouldClose(m_window->getWindow())) {
 			glfwPollEvents(); // Poll for events
 			drawFrame();
 		}	
@@ -313,7 +310,7 @@ private:
 		vkDestroySurfaceKHR(instance, surface, nullptr); // destroy surface
 		vkDestroyInstance(instance, nullptr);
 
-		glfwDestroyWindow(window); // Destroy window
+		glfwDestroyWindow(m_window->getWindow()); // Destroy window
 		glfwTerminate(); // Terminate GLFW
 	}
 	void cleanupSwapChain() {
@@ -409,7 +406,7 @@ private:
 		vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue); // implicitly destroyed
 	}
 	void createSurface() { //create window
-		if (glfwCreateWindowSurface(instance, window, nullptr, &surface) != VK_SUCCESS)
+		if (glfwCreateWindowSurface(instance, m_window->getWindow(), nullptr, &surface) != VK_SUCCESS)
 		{
 			throw std::runtime_error("failed to create window surface!"); // throw an error
 		}
@@ -766,9 +763,9 @@ private:
 	}
 	void recreateSwapChain() {
 		int width = 0, height = 0;
-		glfwGetFramebufferSize(window, &width, &height); // get the window size
+		glfwGetFramebufferSize(m_window->getWindow(), &width, &height); // get the window size
 		while (width == 0 || height == 0) { // wait for the window to be resized
-			glfwGetFramebufferSize(window, &width, &height);
+			glfwGetFramebufferSize(m_window->getWindow(), &width, &height);
 			glfwWaitEvents();
 		}
 		vkDeviceWaitIdle(device);
@@ -907,7 +904,6 @@ private:
 		vkDestroyBuffer(device, stagingBuffer, nullptr);
 		vkFreeMemory(device, stagingBufferMemory, nullptr);
 	}
-
 
 	bool isDeviceSuitable(VkPhysicalDevice device) // can be used to only allow certain devices based on capabilities
 	{ 
@@ -1072,7 +1068,7 @@ private:
 		}
 		else {
 			int width, height;
-			glfwGetFramebufferSize(window, &width, &height);
+			glfwGetFramebufferSize(m_window->getWindow(), &width, &height);
 			VkExtent2D actualExtent = {
 				static_cast<uint32_t>(width),
 				static_cast<uint32_t>(height)
@@ -1084,6 +1080,7 @@ private:
 	}
 
 	VkShaderModule createShaderModule(const std::vector<char>& code) {
+   
 		VkShaderModuleCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 		createInfo.codeSize = code.size();

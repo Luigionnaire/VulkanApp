@@ -8,9 +8,11 @@ project(${APPLICATION_NAME} VERSION 1.0.0)
 set (PROJECT_HEADER_FILES
 
     ./application/include/triangle.hpp
+	./application/include/window.hpp
 )
 set (PROJECT_SOURCE_FILES
     ./application/src/main.cpp
+	./application/src/triangle.cpp
 )
 
 
