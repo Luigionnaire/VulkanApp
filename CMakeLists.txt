@@ -9,6 +9,8 @@ set (PROJECT_HEADER_FILES
 
     ./application/include/triangle.hpp
 	./application/include/window.hpp
+	./application/include/debugManager.hpp
+	./application/include/validationLayersConfig.hpp
 )
 set (PROJECT_SOURCE_FILES
     ./application/src/main.cpp
