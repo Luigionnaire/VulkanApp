@@ -2,7 +2,7 @@
 
 #include <vector>
 
-namespace validationLayersConfig
+namespace ValidationLayersConfig
 {
 #ifdef NDEBUG
     inline const bool enableValidationLayers = false;

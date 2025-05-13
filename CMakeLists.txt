@@ -3,14 +3,14 @@ cmake_minimum_required(VERSION 3.14)
 set(APPLICATION_NAME "VulkanApp")
 project(${APPLICATION_NAME} VERSION 1.0.0)
 
-# Application File
-# YOU WILL NEED TO ADD YOUR LAYER FILES HERE
 set (PROJECT_HEADER_FILES
 
     ./application/include/triangle.hpp
 	./application/include/window.hpp
 	./application/include/debugManager.hpp
 	./application/include/validationLayersConfig.hpp
+	./application/include/extensions.hpp
+	./application/include/instance.hpp
 )
 set (PROJECT_SOURCE_FILES
     ./application/src/main.cpp

@@ -4,9 +4,9 @@
 #include "validationLayersConfig.hpp"
 #include <iostream>
 
-namespace debugManager
+namespace DebugManager
 {
-	VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) { // VL
+	static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) { // VL
 		auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
 		if (func != nullptr) {
 			return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
@@ -16,7 +16,7 @@ namespace debugManager
 		}
 	}
 
-	void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator) { // VL
+	static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator) { // VL
 		auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
 		if (func != nullptr) {
 			func(instance, debugMessenger, pAllocator);
@@ -29,7 +29,7 @@ namespace debugManager
 		return VK_FALSE;
 	}
 
-	void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo)  // VL
+	static void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo)  // VL
 	{
 		createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -38,8 +38,8 @@ namespace debugManager
 		createInfo.pfnUserCallback = debugCallback;
 	}
 
-	void setupDebugMessenger(VkInstance& instance, VkDebugUtilsMessengerEXT& debugMessenger) { // VL
-		if (!validationLayersConfig::enableValidationLayers) return;
+	static void setupDebugMessenger(VkInstance& instance, VkDebugUtilsMessengerEXT& debugMessenger) { // VL
+		if (!ValidationLayersConfig::enableValidationLayers) return;
 
 		VkDebugUtilsMessengerCreateInfoEXT createInfo;
 		populateDebugMessengerCreateInfo(createInfo); // populate the create info struct
@@ -50,13 +50,13 @@ namespace debugManager
 
 	}
 
-	bool checkValidationLayerSupport() { // VL
+	static bool checkValidationLayerSupport() { // VL
 		uint32_t layerCount;
 		vkEnumerateInstanceLayerProperties(&layerCount, nullptr); // get the number of layers
 		std::vector<VkLayerProperties> availableLayers(layerCount); // create a vector of layers
 		vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data()); // get the layers
 
-		for (const char* layerName : validationLayersConfig::validationLayers) {
+		for (const char* layerName : ValidationLayersConfig::validationLayers) {
 			bool layerFound = false;
 
 			for (const auto& layerProperties : availableLayers) {
