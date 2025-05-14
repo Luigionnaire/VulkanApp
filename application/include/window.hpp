@@ -18,15 +18,32 @@ public:
 		return m_window;
 	}
 
+	VkSurfaceKHR getSurface() {
+		return m_surface;
+	}
+
     static void framebufferResizeCallback(GLFWwindow* window, int width, int height) {
         auto appWindow = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
         appWindow->framebufferResized = true;
     }
 
+    void createSurface(const VkInstance& instance) { //create window
+        if (glfwCreateWindowSurface(instance, m_window, nullptr, &m_surface) != VK_SUCCESS)
+        {
+            throw std::runtime_error("failed to create window surface!"); // throw an error
+        }
+    }
+
+    void destroySurface(const VkInstance& instance)
+    {
+        vkDestroySurfaceKHR(instance, m_surface, nullptr);
+    }
+
 private:
     GLFWwindow* m_window;
+	VkSurfaceKHR m_surface;
     const uint32_t width = 800;
     const uint32_t height = 600;
-    bool framebufferResized;
+    bool framebufferResized = false;
 
 };

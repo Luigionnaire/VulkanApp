@@ -89,7 +89,7 @@ private:
 	std::shared_ptr<VKInstance> m_instance;
 
 	//window surface
-	VkSurfaceKHR surface; // window
+	//VkSurfaceKHR surface; // window
 	VkQueue presentQueue;
 
 	//swapchain
@@ -132,7 +132,7 @@ private:
 	void initVulkan()  {
 
 		m_instance = std::make_shared<VKInstance>(); // create a instance object
-		createSurface(); // window
+		m_window->createSurface(m_instance->getInstance()); // window
 		pickPhysicalDevice();
 		createLogicalDevice();
 		createSwapChain();
@@ -239,8 +239,7 @@ private:
 		vkDestroyCommandPool(device, commandPool, nullptr); 
 		vkDestroyDevice(device, nullptr);
 
-		vkDestroySurfaceKHR(m_instance->getInstance(), surface, nullptr); // destroy surface
-		vkDestroyInstance(m_instance->getInstance(), nullptr);
+		m_window->destroySurface(m_instance->getInstance());
 
 		glfwDestroyWindow(m_window->getWindow()); // Destroy window
 		glfwTerminate(); // Terminate GLFW
@@ -317,12 +316,12 @@ private:
 		vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue); // implicitly destroyed
 		vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue); // implicitly destroyed
 	}
-	void createSurface() { //create window
-		if (glfwCreateWindowSurface(m_instance->getInstance(), m_window->getWindow(), nullptr, &surface) != VK_SUCCESS)
-		{
-			throw std::runtime_error("failed to create window surface!"); // throw an error
-		}
-	}
+	//void createSurface() { //create window
+	//	if (glfwCreateWindowSurface(m_instance->getInstance(), m_window->getWindow(), nullptr, &surface) != VK_SUCCESS)
+	//	{
+	//		throw std::runtime_error("failed to create window surface!"); // throw an error
+	//	}
+	//}
 	void createSwapChain() {
 		SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice);
 
@@ -337,7 +336,7 @@ private:
 
 		VkSwapchainCreateInfoKHR createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-		createInfo.surface = surface;
+		createInfo.surface = m_window->getSurface();
 		createInfo.minImageCount = imageCount;
 		createInfo.imageFormat = surfaceFormat.format;
 		createInfo.imageColorSpace = surfaceFormat.colorSpace;
@@ -878,7 +877,7 @@ private:
 		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data()); // get the queue families
 		
 		VkBool32 presentSupport = false;
-		vkGetPhysicalDeviceSurfaceSupportKHR(device, 0, surface, &presentSupport); // check if the device supports the surface
+		vkGetPhysicalDeviceSurfaceSupportKHR(device, 0, m_window->getSurface(), &presentSupport); // check if the device supports the surface
 		// loop through the queue families
 		int i = 0;
 		for (const auto& queueFamily : queueFamilies) { // loop through the queue families
@@ -898,22 +897,22 @@ private:
 
 	SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device) {
 		SwapChainSupportDetails details;
-		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
+		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, m_window->getSurface(), &details.capabilities);
 
 		uint32_t formatCount;
-		vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
+		vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_window->getSurface(), &formatCount, nullptr);
 
 		if (formatCount != 0) {
 			details.formats.resize(formatCount);
-			vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
+			vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_window->getSurface(), &formatCount, details.formats.data());
 		}
 
 		uint32_t presentModeCount;
-		vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
+		vkGetPhysicalDeviceSurfacePresentModesKHR(device, m_window->getSurface(), &presentModeCount, nullptr);
 
 		if (presentModeCount != 0) {
 			details.presentModes.resize(presentModeCount);
-			vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data());
+			vkGetPhysicalDeviceSurfacePresentModesKHR(device, m_window->getSurface(), &presentModeCount, details.presentModes.data());
 		}
 
 		return details;
