@@ -18,7 +18,7 @@ public:
 		return m_window;
 	}
 
-	VkSurfaceKHR getSurface() {
+	VkSurfaceKHR& getSurface() {
 		return m_surface;
 	}
 

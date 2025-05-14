@@ -11,6 +11,9 @@ set (PROJECT_HEADER_FILES
 	./application/include/validationLayersConfig.hpp
 	./application/include/extensions.hpp
 	./application/include/instance.hpp
+	./application/include/device.hpp
+	./application/include/queueFamilyIndices.hpp
+	./application/include/swapChain.hpp
 )
 set (PROJECT_SOURCE_FILES
     ./application/src/main.cpp
