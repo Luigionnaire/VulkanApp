@@ -14,6 +14,7 @@ set (PROJECT_HEADER_FILES
 	./application/include/device.hpp
 	./application/include/queueFamilyIndices.hpp
 	./application/include/swapChain.hpp
+	./application/include/renderPass.hpp
 )
 set (PROJECT_SOURCE_FILES
     ./application/src/main.cpp
