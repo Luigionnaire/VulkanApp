@@ -37,11 +37,12 @@ namespace SwapChain{
 
 class VKSwapChain {
 public:
-	VKSwapChain(VkSurfaceKHR& surface, VkPhysicalDevice physicalDevice, VkDevice device, GLFWwindow* window)
+	VKSwapChain(VkSurfaceKHR& surface, VkPhysicalDevice physicalDevice, VkDevice device, GLFWwindow* window):
+		m_device(device)
 		{
-		createSwapChain(surface, physicalDevice, device, window);
-		createImageViews(device);
-	//	createFrameBuffers(device);
+		createSwapChain(surface, physicalDevice, window);
+		createImageViews();
+		//createFrameBuffers(device);
 	}
 
 	VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) {
@@ -78,7 +79,8 @@ public:
 			return actualExtent;
 		}
 	}
-	void createSwapChain(VkSurfaceKHR surface, VkPhysicalDevice physicalDevice, VkDevice device, GLFWwindow* window) {
+
+	void createSwapChain(VkSurfaceKHR surface, VkPhysicalDevice physicalDevice, GLFWwindow* window) {
 		SwapChain::SwapChainSupportDetails swapChainSupport = SwapChain::querySwapChainSupport(physicalDevice, surface);
 
 		VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
@@ -118,18 +120,18 @@ public:
 		createInfo.clipped = VK_TRUE; // ignore pixels that are obscured(like if behind another window)
 		createInfo.oldSwapchain = VK_NULL_HANDLE; // resizing stuff, look up later
 
-		if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &m_swapChain) != VK_SUCCESS) {
+		if (vkCreateSwapchainKHR(m_device, &createInfo, nullptr, &m_swapChain) != VK_SUCCESS) {
 			throw std::runtime_error("failed to create swap chain!");
 		}
-		vkGetSwapchainImagesKHR(device, m_swapChain, &imageCount, nullptr);
+		vkGetSwapchainImagesKHR(m_device, m_swapChain, &imageCount, nullptr);
 		m_swapChainImages.resize(imageCount);
-		vkGetSwapchainImagesKHR(device, m_swapChain, &imageCount, m_swapChainImages.data());
+		vkGetSwapchainImagesKHR(m_device, m_swapChain, &imageCount, m_swapChainImages.data());
 
 		// save these to member variables for later
 		m_swapChainImageFormat = surfaceFormat.format;
 		m_swapChainExtent = extent;
 	}
-	void createImageViews(VkDevice device) {
+	void createImageViews() {
 		m_swapChainImageViews.resize(m_swapChainImages.size());
 
 		for (size_t i = 0; i < m_swapChainImages.size(); i++) {
@@ -150,34 +152,45 @@ public:
 			createInfo.subresourceRange.baseArrayLayer = 0;
 			createInfo.subresourceRange.layerCount = 1;
 
-			if (vkCreateImageView(device, &createInfo, nullptr, &m_swapChainImageViews[i]) != VK_SUCCESS)
+			if (vkCreateImageView(m_device, &createInfo, nullptr, &m_swapChainImageViews[i]) != VK_SUCCESS)
 			{
 				throw std::runtime_error("failed to create image views!");
 			}
 		}
 	}
-	//void createFrameBuffers(VkDevice device) {
-	//	m_swapChainFramebuffers.resize(m_swapChainImageViews.size());
-	//	for (size_t i = 0; i < m_swapChainImageViews.size(); i++)
-	//	{
-	//		VkImageView attachments[] = {
-	//			m_swapChainImageViews[i]
-	//		};
 
-	//		VkFramebufferCreateInfo framebufferInfo{};
-	//		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-	//		framebufferInfo.renderPass = m_renderPass;
-	//		framebufferInfo.attachmentCount = 1;
-	//		framebufferInfo.pAttachments = attachments;
-	//		framebufferInfo.width = m_swapChainExtent.width;
-	//		framebufferInfo.height = m_swapChainExtent.height;
-	//		framebufferInfo.layers = 1;
+	void createFrameBuffers(VkRenderPass renderPass) {
+		m_swapChainFramebuffers.resize(m_swapChainImageViews.size());
+		for (size_t i = 0; i < m_swapChainImageViews.size(); i++)
+		{
+			VkImageView attachments[] = {
+				m_swapChainImageViews[i]
+			};
 
-	//		if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &m_swapChainFramebuffers[i]) != VK_SUCCESS) {
-	//			throw std::runtime_error("failed to create framebuffer!");
-	//		}
-	//	}
-	//}
+			VkFramebufferCreateInfo framebufferInfo{};
+			framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+			framebufferInfo.renderPass = renderPass;
+			framebufferInfo.attachmentCount = 1;
+			framebufferInfo.pAttachments = attachments;
+			framebufferInfo.width = m_swapChainExtent.width;
+			framebufferInfo.height = m_swapChainExtent.height;
+			framebufferInfo.layers = 1;
+
+			if (vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_swapChainFramebuffers[i]) != VK_SUCCESS) {
+				throw std::runtime_error("failed to create framebuffer!");
+			}
+		}
+	}
+	void cleanupSwapChain() {
+		for (size_t i = 0; i < m_swapChainFramebuffers.size(); i++) {
+			vkDestroyFramebuffer(m_device, m_swapChainFramebuffers[i], nullptr);
+		}
+		for (size_t i = 0; i < m_swapChainImageViews.size(); i++) {
+			vkDestroyImageView(m_device, m_swapChainImageViews[i], nullptr);
+		}
+		vkDestroySwapchainKHR(m_device, m_swapChain, nullptr);
+	}
+
 	VkSwapchainKHR getSwapChain() {
 		return m_swapChain;
 	}
@@ -194,8 +207,9 @@ public:
 		return m_swapChainFramebuffers;
 	}
 private:
+	VkDevice m_device;
 	VkSwapchainKHR m_swapChain;
-	//VkRenderPass m_renderPass;
+	VkRenderPass m_renderPass;
 	std::vector<VkImage> m_swapChainImages;
 	VkFormat m_swapChainImageFormat;
 	VkExtent2D m_swapChainExtent;

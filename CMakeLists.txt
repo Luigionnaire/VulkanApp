@@ -15,6 +15,10 @@ set (PROJECT_HEADER_FILES
 	./application/include/queueFamilyIndices.hpp
 	./application/include/swapChain.hpp
 	./application/include/renderPass.hpp
+	./application/include/shaderManager.hpp
+	./application/include/pipeline.hpp
+	./application/include/vertex.hpp
+
 )
 set (PROJECT_SOURCE_FILES
     ./application/src/main.cpp
