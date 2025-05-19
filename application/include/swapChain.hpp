@@ -35,7 +35,7 @@ namespace SwapChain{
 }
 
 
-class VKSwapChain {
+class VKSwapChain { // TODO fix inconsistencies 
 public:
 	VKSwapChain(VkSurfaceKHR& surface, VkPhysicalDevice physicalDevice, VkDevice device, GLFWwindow* window):
 		m_device(device)
@@ -206,6 +206,7 @@ public:
 	std::vector<VkFramebuffer> getSwapChainFramebuffers() {
 		return m_swapChainFramebuffers;
 	}
+
 private:
 	VkDevice m_device;
 	VkSwapchainKHR m_swapChain;

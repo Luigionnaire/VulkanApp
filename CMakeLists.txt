@@ -18,6 +18,8 @@ set (PROJECT_HEADER_FILES
 	./application/include/shaderManager.hpp
 	./application/include/pipeline.hpp
 	./application/include/vertex.hpp
+	./application/include/commandPool.hpp
+	./application/include/config.hpp
 
 )
 set (PROJECT_SOURCE_FILES
