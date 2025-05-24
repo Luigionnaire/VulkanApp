@@ -5,7 +5,7 @@ project(${APPLICATION_NAME} VERSION 1.0.0)
 
 set (PROJECT_HEADER_FILES
 
-    ./application/include/triangle.hpp
+    ./application/include/renderer.hpp
 	./application/include/window.hpp
 	./application/include/debugManager.hpp
 	./application/include/validationLayersConfig.hpp
@@ -20,11 +20,15 @@ set (PROJECT_HEADER_FILES
 	./application/include/vertex.hpp
 	./application/include/commandPool.hpp
 	./application/include/config.hpp
+	./application/include/bufferUtils.hpp
+	./application/include/mesh.hpp
+	./application/include/descriptorLayout.hpp
+	./application/include/uniformBuffers.hpp
 
 )
 set (PROJECT_SOURCE_FILES
     ./application/src/main.cpp
-	./application/src/triangle.cpp
+	./application/src/renderer.cpp
 )
 
 

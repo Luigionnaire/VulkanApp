@@ -163,4 +163,5 @@ private:
 	VkDevice m_device;
 	VkExtent2D m_swapChainExtent;
 	std::vector<VkImageView> m_swapChainImageViews;
+	//add shaders
 };

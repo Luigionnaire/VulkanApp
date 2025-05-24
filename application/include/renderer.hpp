@@ -1,11 +1,7 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h> // GLFW header
 #include <vulkan/vulkan.h>
-#include <vector>
-#include <optional>
-#include <set>
 #include <algorithm>
-#include <fstream>
 #include <glm/glm.hpp>
 #include <array>
 #include "window.hpp"
@@ -16,31 +12,15 @@
 #include "device.hpp"
 #include "swapChain.hpp"
 #include "renderPass.hpp"
-#include "shaderManager.hpp"
 #include "pipeline.hpp"
 #include "commandPool.hpp"
-//
-//const int MAX_FRAMES_IN_FLIGHT = 2; // frames processed concurrently
-
-
-// vertices
-
-
-const std::vector<Vertex> vertices = {
-	{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-	{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-	{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-	{{-0.5f, 0.5f}, {1.0f, 0.0f, 1.0f}}
-};
-
-const std::vector<uint16_t> indices = {
-	0, 1, 2,
-	2, 3, 0
-};
+#include "mesh.hpp"
+#include "descriptorLayout.hpp"
+#include "uniformBuffers.hpp"
 
 
 
-class Triangle {
+class Renderer {
 public:
 	void run() {
 		initWindow();
@@ -51,22 +31,32 @@ public:
 private:
 	std::shared_ptr<Window> m_window; // window object and surface
 	std::shared_ptr<VKInstance> m_instance; 
-	std::shared_ptr<Device> m_device;
+	std::shared_ptr<Device> m_device; // logical and physical device object
 	std::shared_ptr<VKSwapChain> m_swapChain; 
 	std::shared_ptr<RenderPass> m_renderPass; // render pass object
 	std::shared_ptr<Pipeline> m_pipeline; // pipeline object
 	std::shared_ptr<CommandPool> m_commandPool; // command pool object
+	std::shared_ptr<DescriptorLayout> m_descriptorSetLayout; // descriptor set layout object
+	std::shared_ptr<UniformBuffers> m_uniformBuffers; // uniform buffer object
 
+	const std::vector<Vertex> m_vertices = {
+	{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+	{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+	{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+	{{-0.5f, 0.5f}, {1.0f, 0.0f, 1.0f}}
+	};
+
+	const std::vector<uint16_t> m_indices = {
+		0, 1, 2,
+		2, 3, 0
+	};
+
+	std::shared_ptr<Mesh> m_triangle;
 	//synchronization
 	std::vector<VkSemaphore> imageAvailableSemaphores;
 	std::vector<VkSemaphore> renderFinishedSemaphores;
 	std::vector<VkFence> inFlightFences;
-
-	VkBuffer vertexBuffer;
-	VkDeviceMemory vertexBufferMemory;
-	VkBuffer indexBuffer;
-	VkDeviceMemory indexBufferMemory;
-
+	 
 	bool framebufferResized = false;
 
 	uint32_t currentFrame = 0;
@@ -75,17 +65,17 @@ private:
 		m_window = std::make_shared<Window>(); // create a window object
 	}
 	void initVulkan()  {
-
 		m_instance = std::make_shared<VKInstance>(); // create a instance object
 		m_window->createSurface(m_instance->getInstance()); // window
 		m_device = std::make_shared<Device>(m_instance->getInstance(), m_window->getSurface()); // create a device object
 		m_swapChain = std::make_shared<VKSwapChain>(m_window->getSurface(), m_device->getPhysicalDevice(), m_device->getDevice(), m_window->getWindow());
 		m_renderPass = std::make_shared<RenderPass>(m_device->getDevice(), m_swapChain->getSwapChainImageFormat()); // create a render pass object
+		m_descriptorSetLayout = std::make_shared<DescriptorLayout>(m_device->getDevice());
 		m_pipeline = std::make_shared<Pipeline>(m_renderPass->getRenderPass(), m_device->getDevice(), m_swapChain->getSwapChainExtent(), m_swapChain->getSwapChainImageViews()); // create a pipeline object
 		m_swapChain->createFrameBuffers(m_renderPass->getRenderPass());
 		m_commandPool = std::make_shared<CommandPool>(m_device->getDevice(), m_device->getPhysicalDevice(), m_window->getSurface()); // create a command pool object
-		createVertexBuffer();
-		createIndexBuffer();
+		m_triangle = std::make_shared<Mesh>(m_device->getDevice(), m_device->getPhysicalDevice(), m_commandPool->getCommandPool(), m_device->getGraphicsQueue(), m_vertices, m_indices);
+		m_uniformBuffers = std::make_shared<UniformBuffers>(m_device->getDevice(), m_device->getPhysicalDevice());
 		createSyncObjects();
 	}
 	void mainLoop() {
@@ -111,6 +101,8 @@ private:
 		else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) { // check for errors
 			throw std::runtime_error("failed to acquire swap chain image!");
 		}
+		m_uniformBuffers->updateUniformBuffer(currentFrame, m_swapChain->getSwapChainExtent()); // update the uniforms
+
 		vkResetFences(m_device->getDevice(), 1, &inFlightFences[currentFrame]); // only reset fence if we are submitting work !!memory access!!
 
 		vkResetCommandBuffer(m_commandPool->getCommandBuffer(currentFrame), 0);
@@ -160,28 +152,20 @@ private:
 	// cleanup functions
 	void cleanup() {
 		m_swapChain->cleanupSwapChain();
-
-		vkDestroyBuffer(m_device->getDevice(), indexBuffer, nullptr);
-		vkFreeMemory(m_device->getDevice(), indexBufferMemory, nullptr);
-
-		vkDestroyBuffer(m_device->getDevice(), vertexBuffer, nullptr); 
-		vkFreeMemory(m_device->getDevice(), vertexBufferMemory, nullptr);
-
+		m_uniformBuffers->destroyUniformBuffers();
+		m_descriptorSetLayout->destroyDescriptorSetLayout();
+		m_triangle->freeMemory();
 		m_pipeline->destroyPipeline();
 		vkDestroyRenderPass(m_device->getDevice(), m_renderPass->getRenderPass(), nullptr);
-
 		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) // cleanup semaphores and fences
 		{
 			vkDestroySemaphore(m_device->getDevice(), renderFinishedSemaphores[i], nullptr);
 			vkDestroySemaphore(m_device->getDevice(), imageAvailableSemaphores[i], nullptr);
 			vkDestroyFence(m_device->getDevice(), inFlightFences[i], nullptr);
 		}
-
 		vkDestroyCommandPool(m_device->getDevice(), m_commandPool->getCommandPool(), nullptr);
 		vkDestroyDevice(m_device->getDevice(), nullptr);
-
 		m_window->destroySurface(m_instance->getInstance());
-
 		glfwDestroyWindow(m_window->getWindow()); // Destroy window
 		glfwTerminate(); // Terminate GLFW
 	}
@@ -208,46 +192,6 @@ private:
 		}
 	}
 
-	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
-		VkBufferCreateInfo bufferInfo{};
-		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		bufferInfo.size = size;
-		bufferInfo.usage = usage; // specify purpose
-		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // only used from graphics queue
-
-		if (vkCreateBuffer(m_device->getDevice(), &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
-			throw std::runtime_error("failed to create vertex buffer!");
-		}
-
-		VkMemoryRequirements memRequirements;
-		vkGetBufferMemoryRequirements(m_device->getDevice(), buffer, &memRequirements);
-
-		VkMemoryAllocateInfo allocInfo{};
-		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		allocInfo.allocationSize = memRequirements.size; // size of the buffer
-		allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
-
-		if (vkAllocateMemory(m_device->getDevice(), &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
-			throw std::runtime_error("failed to allocate vertex buffer memory!");
-		}
-
-		vkBindBufferMemory(m_device->getDevice(), buffer, bufferMemory, 0);  // last parameter is offset
-
-	}
-	void recreateSwapChain() {
-		int width = 0, height = 0;
-		glfwGetFramebufferSize(m_window->getWindow(), &width, &height); // get the window size
-		while (width == 0 || height == 0) { // wait for the window to be resized
-			glfwGetFramebufferSize(m_window->getWindow(), &width, &height);
-			glfwWaitEvents();
-		}
-		vkDeviceWaitIdle(m_device->getDevice());
-
-		m_swapChain->cleanupSwapChain();
-		m_swapChain->createSwapChain(m_window->getSurface(), m_device->getPhysicalDevice(),m_window->getWindow());
-		m_swapChain->createImageViews();
-		m_swapChain->createFrameBuffers(m_renderPass->getRenderPass());
-	}
 	void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
 		VkCommandBufferBeginInfo beginInfo{};
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -289,111 +233,32 @@ private:
 		scissor.extent = swapChainExtent;
 		vkCmdSetScissor(commandBuffer, 0, 1, &scissor); // set the scissor
 
-		//BUFFERS
-		VkBuffer vertexBuffers[] = { vertexBuffer }; 
-		VkDeviceSize offsets[] = { 0 };
-		vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+		////BUFFERS
+		m_triangle->bindBuffers(commandBuffer); // bind the buffers
+		m_triangle->draw(commandBuffer); // draw the triangle
+		vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(m_indices.size()), 1, 0, 0, 0); // draw the triangle
 
-		vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
-
-		vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
-		
 		vkCmdEndRenderPass(commandBuffer); // end render pass
 		if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
 			throw std::runtime_error("failed to record command buffer!");
 		}
 	}
-	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
 
-		VkCommandBufferAllocateInfo allocInfo{};
-		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		allocInfo.commandPool = m_commandPool->getCommandPool();
-		allocInfo.commandBufferCount = 1;
-
-		VkCommandBuffer commandBuffer;
-		vkAllocateCommandBuffers(m_device->getDevice(), &allocInfo, &commandBuffer);
-
-		VkCommandBufferBeginInfo beginInfo{};
-		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT; 
-
-		vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
-		VkBufferCopy copyRegion{};
-		copyRegion.size = size; 
-		vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
-
-		vkEndCommandBuffer(commandBuffer);
-
-		VkSubmitInfo submitInfo{};
-		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &commandBuffer;
-
-		vkQueueSubmit(m_device->getGraphicsQueue(), 1, &submitInfo, VK_NULL_HANDLE);
-		vkQueueWaitIdle(m_device->getGraphicsQueue()); // wait for the queue to finish
-
-		vkFreeCommandBuffers(m_device->getDevice(), m_commandPool->getCommandPool(), 1, &commandBuffer); // cleanup command buffer
-
-	}
-
-	// geometry
-	void createVertexBuffer() {
-		VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
-
-		VkBuffer stagingBuffer;
-		VkDeviceMemory stagingBufferMemory;
-		createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
-
-		void* data;
-		vkMapMemory(m_device->getDevice(), stagingBufferMemory, 0, bufferSize, 0, &data);
-		memcpy(data, vertices.data(), (size_t)bufferSize);
-		vkUnmapMemory(m_device->getDevice(), stagingBufferMemory);
-
-		createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
-
-		copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
-
-		vkDestroyBuffer(m_device->getDevice(), stagingBuffer, nullptr);
-		vkFreeMemory(m_device->getDevice(), stagingBufferMemory, nullptr);
-
-	}
-	void createIndexBuffer() {
-		VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
-
-		VkBuffer stagingBuffer;
-		VkDeviceMemory stagingBufferMemory;
-		createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
-
-		void* data;
-		vkMapMemory(m_device->getDevice(), stagingBufferMemory, 0, bufferSize, 0, &data);
-		memcpy(data, indices.data(), (size_t)bufferSize);
-		vkUnmapMemory(m_device->getDevice(), stagingBufferMemory);
-
-		createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
-
-		copyBuffer(stagingBuffer, indexBuffer, bufferSize);
-
-		vkDestroyBuffer(m_device->getDevice(), stagingBuffer, nullptr);
-		vkFreeMemory(m_device->getDevice(), stagingBufferMemory, nullptr);
-	}
-
-	static void framebufferResizeCallback(GLFWwindow* window, int width, int height) { // callback for window resize
-		auto app = reinterpret_cast<Triangle*>(glfwGetWindowUserPointer(window)); // get the app pointer
-		app->framebufferResized = true; // set the resized flag
-	}
-
-	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
-		VkPhysicalDeviceMemoryProperties memProperties;
-		vkGetPhysicalDeviceMemoryProperties(m_device->getPhysicalDevice(), &memProperties); // get the memory properties
-
-		for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) { // loop through the memory types
-			if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) { // check if the type is supported
-				return i; // return the index
-			}
+	// window resize
+	void recreateSwapChain() {
+		int width = 0, height = 0;
+		glfwGetFramebufferSize(m_window->getWindow(), &width, &height); // get the window size
+		while (width == 0 || height == 0) { // wait for the window to be resized
+			glfwGetFramebufferSize(m_window->getWindow(), &width, &height);
+			glfwWaitEvents();
 		}
-		throw std::runtime_error("failed to find suitable memory type!"); // throw an error
+		vkDeviceWaitIdle(m_device->getDevice());
+
+		m_swapChain->cleanupSwapChain();
+		m_swapChain->createSwapChain(m_window->getSurface(), m_device->getPhysicalDevice(),m_window->getWindow());
+		m_swapChain->createImageViews();
+		m_swapChain->createFrameBuffers(m_renderPass->getRenderPass());
 	}
 
+	
 };
