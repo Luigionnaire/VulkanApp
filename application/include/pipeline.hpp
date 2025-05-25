@@ -7,11 +7,12 @@
 
 class Pipeline {
 public:
-	Pipeline(VkRenderPass renderPass, VkDevice device, VkExtent2D swapChainExtent, std::vector<VkImageView> swapChainImageViews ) :
+	Pipeline(VkRenderPass renderPass, VkDevice device, VkExtent2D swapChainExtent, std::vector<VkImageView> swapChainImageViews, VkDescriptorSetLayout descriptorSetLayout ) :
 		m_renderPass(renderPass),
 		m_device(device),
 		m_swapChainExtent(swapChainExtent),
-		m_swapChainImageViews(swapChainImageViews)
+		m_swapChainImageViews(swapChainImageViews),
+		m_descriptorSetLayout(descriptorSetLayout)
 	{
 		createGraphicsPipeline();
 	}
@@ -90,7 +91,7 @@ public:
 		rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 		rasterizer.lineWidth = 1.0f; // larger values need wideLines GPU feature
 		rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-		rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+		rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE; // adjusted to fit the Y flip done due to openGL standards in glm
 		rasterizer.depthBiasEnable = VK_FALSE; // useful for shadow mapping
 
 		VkPipelineMultisampleStateCreateInfo multisampling{};
@@ -113,8 +114,11 @@ public:
 		colorBlending.blendConstants[2] = 0.0f; // Optional
 		colorBlending.blendConstants[3] = 0.0f; // Optional
 
+
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+		pipelineLayoutInfo.setLayoutCount = 1; // number of descriptor set layouts
+		pipelineLayoutInfo.pSetLayouts = &m_descriptorSetLayout; // descriptor set layout
 
 		if (vkCreatePipelineLayout(m_device, &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS) {
 			throw std::runtime_error("failed to create pipeline layout!");
@@ -163,5 +167,6 @@ private:
 	VkDevice m_device;
 	VkExtent2D m_swapChainExtent;
 	std::vector<VkImageView> m_swapChainImageViews;
+	VkDescriptorSetLayout m_descriptorSetLayout;
 	//add shaders
 };

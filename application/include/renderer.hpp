@@ -36,7 +36,7 @@ private:
 	std::shared_ptr<RenderPass> m_renderPass; // render pass object
 	std::shared_ptr<Pipeline> m_pipeline; // pipeline object
 	std::shared_ptr<CommandPool> m_commandPool; // command pool object
-	std::shared_ptr<DescriptorLayout> m_descriptorSetLayout; // descriptor set layout object
+	std::shared_ptr<DescriptorManager> m_descriptorManager; // descriptor set layout object
 	std::shared_ptr<UniformBuffers> m_uniformBuffers; // uniform buffer object
 
 	const std::vector<Vertex> m_vertices = {
@@ -70,13 +70,15 @@ private:
 		m_device = std::make_shared<Device>(m_instance->getInstance(), m_window->getSurface()); // create a device object
 		m_swapChain = std::make_shared<VKSwapChain>(m_window->getSurface(), m_device->getPhysicalDevice(), m_device->getDevice(), m_window->getWindow());
 		m_renderPass = std::make_shared<RenderPass>(m_device->getDevice(), m_swapChain->getSwapChainImageFormat()); // create a render pass object
-		m_descriptorSetLayout = std::make_shared<DescriptorLayout>(m_device->getDevice());
-		m_pipeline = std::make_shared<Pipeline>(m_renderPass->getRenderPass(), m_device->getDevice(), m_swapChain->getSwapChainExtent(), m_swapChain->getSwapChainImageViews()); // create a pipeline object
+		m_uniformBuffers = std::make_shared<UniformBuffers>(m_device->getDevice(), m_device->getPhysicalDevice());
+		m_descriptorManager = std::make_shared<DescriptorManager>(m_device->getDevice(), m_uniformBuffers->getUniformBuffers());
+		m_pipeline = std::make_shared<Pipeline>(m_renderPass->getRenderPass(), m_device->getDevice(), m_swapChain->getSwapChainExtent(), m_swapChain->getSwapChainImageViews(), m_descriptorManager->getDescriptorSetLayout()); // create a pipeline object
 		m_swapChain->createFrameBuffers(m_renderPass->getRenderPass());
 		m_commandPool = std::make_shared<CommandPool>(m_device->getDevice(), m_device->getPhysicalDevice(), m_window->getSurface()); // create a command pool object
 		m_triangle = std::make_shared<Mesh>(m_device->getDevice(), m_device->getPhysicalDevice(), m_commandPool->getCommandPool(), m_device->getGraphicsQueue(), m_vertices, m_indices);
-		m_uniformBuffers = std::make_shared<UniformBuffers>(m_device->getDevice(), m_device->getPhysicalDevice());
 		createSyncObjects();
+		//createDescriptorPool();
+		//createDescriptorSets();
 	}
 	void mainLoop() {
 		// Main loop
@@ -153,7 +155,7 @@ private:
 	void cleanup() {
 		m_swapChain->cleanupSwapChain();
 		m_uniformBuffers->destroyUniformBuffers();
-		m_descriptorSetLayout->destroyDescriptorSetLayout();
+		m_descriptorManager->destroyDescriptorManager();
 		m_triangle->freeMemory();
 		m_pipeline->destroyPipeline();
 		vkDestroyRenderPass(m_device->getDevice(), m_renderPass->getRenderPass(), nullptr);
@@ -166,6 +168,7 @@ private:
 		vkDestroyCommandPool(m_device->getDevice(), m_commandPool->getCommandPool(), nullptr);
 		vkDestroyDevice(m_device->getDevice(), nullptr);
 		m_window->destroySurface(m_instance->getInstance());
+
 		glfwDestroyWindow(m_window->getWindow()); // Destroy window
 		glfwTerminate(); // Terminate GLFW
 	}
@@ -235,8 +238,11 @@ private:
 
 		////BUFFERS
 		m_triangle->bindBuffers(commandBuffer); // bind the buffers
+
+		//DESCRIPTOR SETS
+		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->getPipelineLayout(), 0, 1, &m_descriptorManager->getDescriptorSet(currentFrame), 0, nullptr); // bind the descriptor sets
+
 		m_triangle->draw(commandBuffer); // draw the triangle
-		vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(m_indices.size()), 1, 0, 0, 0); // draw the triangle
 
 		vkCmdEndRenderPass(commandBuffer); // end render pass
 		if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
@@ -259,6 +265,55 @@ private:
 		m_swapChain->createImageViews();
 		m_swapChain->createFrameBuffers(m_renderPass->getRenderPass());
 	}
+	//VkDescriptorPool m_descriptorPool; // descriptor pool for uniform buffers
+	//std::vector<VkDescriptorSet> m_descriptorSets;
 
-	
+	//void createDescriptorPool() {
+	//	VkDescriptorPoolSize poolSize{};
+	//	poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	//	poolSize.descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+	//	VkDescriptorPoolCreateInfo poolInfo{};
+	//	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	//	poolInfo.poolSizeCount = 1;
+	//	poolInfo.pPoolSizes = &poolSize;
+	//	poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+
+	//	if (vkCreateDescriptorPool(m_device->getDevice(), &poolInfo, nullptr, &m_descriptorPool) != VK_SUCCESS) {
+	//		throw std::runtime_error("failed to create descriptor pool!");
+	//	}
+
+	//}
+
+	//void createDescriptorSets() {
+	//	std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, m_descriptorSetLayout->getDescriptorSetLayout());
+	//	VkDescriptorSetAllocateInfo allocInfo{};
+	//	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	//	allocInfo.descriptorPool = m_descriptorPool;
+	//	allocInfo.descriptorSetCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+	//	allocInfo.pSetLayouts = layouts.data();
+
+	//	m_descriptorSets.resize(MAX_FRAMES_IN_FLIGHT);
+	//	if (vkAllocateDescriptorSets(m_device->getDevice(), &allocInfo, m_descriptorSets.data()) != VK_SUCCESS) {
+	//		throw std::runtime_error("failed to allocate descriptor sets!");
+	//	}
+
+	//	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+	//		VkDescriptorBufferInfo bufferInfo{};
+	//		bufferInfo.buffer = m_uniformBuffers->getUniformBuffer(i);
+	//		bufferInfo.offset = 0;
+	//		bufferInfo.range = sizeof(UBO);
+
+	//		VkWriteDescriptorSet descriptorWrite{};
+	//		descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	//		descriptorWrite.dstSet = m_descriptorSets[i];
+	//		descriptorWrite.dstBinding = 0;
+	//		descriptorWrite.dstArrayElement = 0;
+	//		descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	//		descriptorWrite.descriptorCount = 1;
+	//		descriptorWrite.pBufferInfo = &bufferInfo;
+	//		descriptorWrite.pImageInfo = nullptr; // for image data
+	//		descriptorWrite.pTexelBufferView = nullptr; // for  buffer views
+	//		vkUpdateDescriptorSets(m_device->getDevice(), 1, &descriptorWrite, 0, nullptr);
+	//	}
+	//}
 };

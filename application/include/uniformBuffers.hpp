@@ -38,6 +38,16 @@ public:
 		ubo.proj[1][1] *= -1; // flip the y axis because openGL standards in glm
 		memcpy(m_uniformBuffersMapped[currentImage], &ubo, sizeof(ubo)); // copy the data to the buffer
 	}
+
+	VkBuffer getUniformBuffer(uint32_t index) const {
+		if (index < m_uniformBuffers.size()) {
+			return m_uniformBuffers[index];
+		}
+		throw std::out_of_range("Index out of range for uniform buffers");
+	}
+	std::vector<VkBuffer> getUniformBuffers() const {
+		return m_uniformBuffers;
+	}
 private:
 	std::vector<VkBuffer> m_uniformBuffers;
 	std::vector<VkDeviceMemory> m_uniformBuffersMemory;
