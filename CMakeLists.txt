@@ -84,3 +84,36 @@ target_link_libraries(${APPLICATION_NAME} PRIVATE glm)
 target_link_libraries(${APPLICATION_NAME} PRIVATE glfw)
 
 set_target_properties(glm PROPERTIES FOLDER "GLM")
+
+
+# ======= STB Image Setup =======
+set(STB_IMAGE_DIR "${CMAKE_CURRENT_BINARY_DIR}/_deps/stb_image")
+set(STB_IMAGE_INCLUDE_DIR "${STB_IMAGE_DIR}/stbImage")
+file(MAKE_DIRECTORY "${STB_IMAGE_INCLUDE_DIR}")
+
+# Download stb_image.h
+file(DOWNLOAD
+    https://raw.githubusercontent.com/nothings/stb/master/stb_image.h
+    "${STB_IMAGE_INCLUDE_DIR}/stb_image.h"
+    STATUS _stb_status
+    TLS_VERIFY ON
+    LOG _stb_log
+)
+
+list(GET _stb_status 0 _stb_status_code)
+if(NOT _stb_status_code EQUAL 0)
+    message(FATAL_ERROR "Failed to download stb_image.h:\n${_stb_log}")
+endif()
+
+# Create stb_image.cpp (implementation file)
+file(WRITE "${STB_IMAGE_INCLUDE_DIR}/stb_image.cpp" "#define STB_IMAGE_IMPLEMENTATION\n#include \"stb_image.h\"")
+
+# Create a static library
+add_library(stb_image_impl STATIC "${STB_IMAGE_INCLUDE_DIR}/stb_image.cpp")
+target_include_directories(stb_image_impl PUBLIC "${STB_IMAGE_INCLUDE_DIR}")
+
+# Link it to your app
+target_link_libraries(${APPLICATION_NAME} PRIVATE stb_image_impl)
+
+# Organize in Visual Studio
+set_target_properties(stb_image_impl PROPERTIES FOLDER "stb_image")

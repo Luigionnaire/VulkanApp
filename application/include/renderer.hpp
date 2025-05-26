@@ -17,8 +17,7 @@
 #include "mesh.hpp"
 #include "descriptorLayout.hpp"
 #include "uniformBuffers.hpp"
-
-
+#include <stb_image.h>
 
 class Renderer {
 public:
@@ -265,55 +264,70 @@ private:
 		m_swapChain->createImageViews();
 		m_swapChain->createFrameBuffers(m_renderPass->getRenderPass());
 	}
-	//VkDescriptorPool m_descriptorPool; // descriptor pool for uniform buffers
-	//std::vector<VkDescriptorSet> m_descriptorSets;
 
-	//void createDescriptorPool() {
-	//	VkDescriptorPoolSize poolSize{};
-	//	poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	//	poolSize.descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
-	//	VkDescriptorPoolCreateInfo poolInfo{};
-	//	poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	//	poolInfo.poolSizeCount = 1;
-	//	poolInfo.pPoolSizes = &poolSize;
-	//	poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
-	//	if (vkCreateDescriptorPool(m_device->getDevice(), &poolInfo, nullptr, &m_descriptorPool) != VK_SUCCESS) {
-	//		throw std::runtime_error("failed to create descriptor pool!");
-	//	}
 
-	//}
+	void createTextureImage() {
+		int texWidth, texHeight, texChannels;
+		stbi_uc* pixels = stbi_load("./assets/textures/statue.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+		VkDeviceSize imageSize = texWidth * texHeight * 4;
 
-	//void createDescriptorSets() {
-	//	std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, m_descriptorSetLayout->getDescriptorSetLayout());
-	//	VkDescriptorSetAllocateInfo allocInfo{};
-	//	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	//	allocInfo.descriptorPool = m_descriptorPool;
-	//	allocInfo.descriptorSetCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
-	//	allocInfo.pSetLayouts = layouts.data();
+		if (!pixels) {
+			throw std::runtime_error("failed to load texture image!");
+		}
 
-	//	m_descriptorSets.resize(MAX_FRAMES_IN_FLIGHT);
-	//	if (vkAllocateDescriptorSets(m_device->getDevice(), &allocInfo, m_descriptorSets.data()) != VK_SUCCESS) {
-	//		throw std::runtime_error("failed to allocate descriptor sets!");
-	//	}
+		VkBuffer stagingBuffer;
+		VkDeviceMemory stagingBufferMemory;
+		BufferUtils::createBuffer(m_device->getDevice(), m_device->getPhysicalDevice(), imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+		
+		void* data;
+		vkMapMemory(m_device->getDevice(), stagingBufferMemory, 0, imageSize, 0, &data);
+		memcpy(data, pixels, static_cast<size_t>(imageSize));
+		vkUnmapMemory(m_device->getDevice(), stagingBufferMemory);
+		
+		stbi_image_free(pixels);
 
-	//	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-	//		VkDescriptorBufferInfo bufferInfo{};
-	//		bufferInfo.buffer = m_uniformBuffers->getUniformBuffer(i);
-	//		bufferInfo.offset = 0;
-	//		bufferInfo.range = sizeof(UBO);
+		createImage(texWidth, texHeight, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_textureImage, m_textureImageMemory);
+	}
 
-	//		VkWriteDescriptorSet descriptorWrite{};
-	//		descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	//		descriptorWrite.dstSet = m_descriptorSets[i];
-	//		descriptorWrite.dstBinding = 0;
-	//		descriptorWrite.dstArrayElement = 0;
-	//		descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	//		descriptorWrite.descriptorCount = 1;
-	//		descriptorWrite.pBufferInfo = &bufferInfo;
-	//		descriptorWrite.pImageInfo = nullptr; // for image data
-	//		descriptorWrite.pTexelBufferView = nullptr; // for  buffer views
-	//		vkUpdateDescriptorSets(m_device->getDevice(), 1, &descriptorWrite, 0, nullptr);
-	//	}
-	//}
+	VkImage m_textureImage;
+	VkDeviceMemory m_textureImageMemory;
+
+	void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory) {
+		VkImageCreateInfo imageInfo{};
+		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+		imageInfo.imageType = VK_IMAGE_TYPE_2D;
+		imageInfo.extent.width = width;
+		imageInfo.extent.height = height;
+		imageInfo.extent.depth = 1;
+		imageInfo.mipLevels = 1;
+		imageInfo.arrayLayers = 1;
+		imageInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
+		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+		imageInfo.flags = 0; // for multisampling
+	
+		if (vkCreateImage(m_device->getDevice(), &imageInfo, nullptr, &image) != VK_SUCCESS)
+		{
+			throw std::runtime_error("falied to create image!");
+		}
+
+		VkMemoryRequirements memRequirements;
+		vkGetImageMemoryRequirements(m_device->getDevice(), image, &memRequirements);
+
+		VkMemoryAllocateInfo allocInfo{};
+		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		allocInfo.allocationSize = memRequirements.size;
+		allocInfo.memoryTypeIndex = BufferUtils::findMemoryType(m_device->getPhysicalDevice(), memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+		if (vkAllocateMemory(m_device->getDevice(), &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
+			throw std::runtime_error("failed to allocate image memory!");
+		}
+
+		vkBindImageMemory(m_device->getDevice(), image, imageMemory, 0);
+
+	}
 };
