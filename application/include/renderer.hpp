@@ -74,6 +74,7 @@ private:
 		m_pipeline = std::make_shared<Pipeline>(m_renderPass->getRenderPass(), m_device->getDevice(), m_swapChain->getSwapChainExtent(), m_swapChain->getSwapChainImageViews(), m_descriptorManager->getDescriptorSetLayout()); // create a pipeline object
 		m_swapChain->createFrameBuffers(m_renderPass->getRenderPass());
 		m_commandPool = std::make_shared<CommandPool>(m_device->getDevice(), m_device->getPhysicalDevice(), m_window->getSurface()); // create a command pool object
+		createTextureImage();
 		m_triangle = std::make_shared<Mesh>(m_device->getDevice(), m_device->getPhysicalDevice(), m_commandPool->getCommandPool(), m_device->getGraphicsQueue(), m_vertices, m_indices);
 		createSyncObjects();
 		//createDescriptorPool();
@@ -153,6 +154,9 @@ private:
 	// cleanup functions
 	void cleanup() {
 		m_swapChain->cleanupSwapChain();
+
+		vkDestroyImage(m_device->getDevice(), m_textureImage, nullptr);
+		vkFreeMemory(m_device->getDevice(), m_textureImageMemory, nullptr);
 		m_uniformBuffers->destroyUniformBuffers();
 		m_descriptorManager->destroyDescriptorManager();
 		m_triangle->freeMemory();
@@ -288,6 +292,13 @@ private:
 		stbi_image_free(pixels);
 
 		createImage(texWidth, texHeight, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_textureImage, m_textureImageMemory);
+		BufferUtils::transitionImageLayout(m_device->getDevice(), m_commandPool->getCommandPool(), m_device->getGraphicsQueue(), m_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL); // transition to transfer layout
+		BufferUtils::copyBufferToImage(m_device->getDevice(), m_commandPool->getCommandPool(), m_device->getGraphicsQueue(), stagingBuffer, m_textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
+		BufferUtils::transitionImageLayout(m_device->getDevice(), m_commandPool->getCommandPool(), m_device->getGraphicsQueue(), m_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL); // transition to shader layout
+	
+		vkDestroyBuffer(m_device->getDevice(), stagingBuffer, nullptr);
+		vkFreeMemory(m_device->getDevice(), stagingBufferMemory, nullptr);
+	
 	}
 
 	VkImage m_textureImage;
