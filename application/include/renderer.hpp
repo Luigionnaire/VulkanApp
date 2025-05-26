@@ -39,10 +39,10 @@ private:
 	std::shared_ptr<UniformBuffers> m_uniformBuffers; // uniform buffer object
 
 	const std::vector<Vertex> m_vertices = {
-	{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-	{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-	{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-	{{-0.5f, 0.5f}, {1.0f, 0.0f, 1.0f}}
+	{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+	{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+	{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+	{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
 	};
 
 	const std::vector<uint16_t> m_indices = {
@@ -77,6 +77,7 @@ private:
 		createTextureImage();
 		createTextureImageView();
 		createTextureSampler();
+		m_descriptorManager->createDescriptorSets(m_textureImageView, m_textureSampler); // find a better solution
 		m_triangle = std::make_shared<Mesh>(m_device->getDevice(), m_device->getPhysicalDevice(), m_commandPool->getCommandPool(), m_device->getGraphicsQueue(), m_vertices, m_indices);
 		createSyncObjects();
 		//createDescriptorPool();
