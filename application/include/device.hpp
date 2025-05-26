@@ -69,6 +69,7 @@ private:
 		}
 
 		VkPhysicalDeviceFeatures deviceFeatures{};
+		deviceFeatures.samplerAnisotropy = VK_TRUE; // enable anisotropy 
 
 		VkDeviceCreateInfo createInfo{};
 
@@ -105,7 +106,10 @@ private:
 			SwapChain::SwapChainSupportDetails swapChainSupport = SwapChain::querySwapChainSupport(device, m_surface); // get the swap chain support
 			swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty(); // check if the swap chain is adequate
 		}
-		return indices.isComplete() && extensionsSupported && swapChainAdequate;
+		VkPhysicalDeviceFeatures supportedFeatures;
+		vkGetPhysicalDeviceFeatures(device, &supportedFeatures); // get the supported features
+
+		return indices.isComplete() && extensionsSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
 	}
 
 	VkSurfaceKHR m_surface;

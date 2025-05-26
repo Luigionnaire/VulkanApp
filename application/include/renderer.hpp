@@ -75,6 +75,8 @@ private:
 		m_swapChain->createFrameBuffers(m_renderPass->getRenderPass());
 		m_commandPool = std::make_shared<CommandPool>(m_device->getDevice(), m_device->getPhysicalDevice(), m_window->getSurface()); // create a command pool object
 		createTextureImage();
+		createTextureImageView();
+		createTextureSampler();
 		m_triangle = std::make_shared<Mesh>(m_device->getDevice(), m_device->getPhysicalDevice(), m_commandPool->getCommandPool(), m_device->getGraphicsQueue(), m_vertices, m_indices);
 		createSyncObjects();
 		//createDescriptorPool();
@@ -155,6 +157,8 @@ private:
 	void cleanup() {
 		m_swapChain->cleanupSwapChain();
 
+		vkDestroySampler(m_device->getDevice(), m_textureSampler, nullptr); // destroy the texture sampler
+		vkDestroyImageView(m_device->getDevice(), m_textureImageView, nullptr); 
 		vkDestroyImage(m_device->getDevice(), m_textureImage, nullptr);
 		vkFreeMemory(m_device->getDevice(), m_textureImageMemory, nullptr);
 		m_uniformBuffers->destroyUniformBuffers();
@@ -340,5 +344,63 @@ private:
 
 		vkBindImageMemory(m_device->getDevice(), image, imageMemory, 0);
 
+	}
+
+	VkImageView m_textureImageView;
+
+	VkImageView createImageView(VkDevice device, VkImage image, VkFormat format) {
+		VkImageViewCreateInfo viewInfo{};
+		viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		viewInfo.image = image;
+		viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		viewInfo.format = format;
+		viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		viewInfo.subresourceRange.baseMipLevel = 0;
+		viewInfo.subresourceRange.levelCount = 1;
+		viewInfo.subresourceRange.baseArrayLayer = 0;
+		viewInfo.subresourceRange.layerCount = 1;
+
+		VkImageView imageView;
+		if (vkCreateImageView(device, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create texture image view!");
+		}
+
+		return imageView;
+	}
+
+	void createTextureImageView() {
+		m_textureImageView = createImageView(m_device->getDevice(), m_textureImage, VK_FORMAT_R8G8B8A8_SRGB); // create the texture image view
+	}
+
+	VkSampler m_textureSampler;
+
+	void createTextureSampler() {
+		VkSamplerCreateInfo samplerInfo{};
+		samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+		samplerInfo.magFilter = VK_FILTER_LINEAR; // linear filtering
+		samplerInfo.minFilter = VK_FILTER_LINEAR; // linear filtering
+		samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT; // repeat the texture
+		samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT; // repeat the texture
+		samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT; // repeat the texture
+
+		samplerInfo.anisotropyEnable = VK_TRUE; // enable anisotropy
+
+		VkPhysicalDeviceProperties properties{}; // can query at the start if used multiple times
+		vkGetPhysicalDeviceProperties(m_device->getPhysicalDevice(), &properties); // get the physical device properties
+		samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy; // set it to the max allowed by device
+	
+		samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK; // border color
+		samplerInfo.unnormalizedCoordinates = VK_FALSE; // normalized coordinates
+		samplerInfo.compareEnable = VK_FALSE; // no comparison
+		samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS; // percentage-closer filtering
+
+		samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR; // linear mipmapping
+		samplerInfo.mipLodBias = 0.0f; // no mipmap bias
+		samplerInfo.minLod = 0.0f; // no min lod
+		samplerInfo.maxLod = 0.0f; // no max lod
+
+		if (vkCreateSampler(m_device->getDevice(), &samplerInfo, nullptr, &m_textureSampler) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create texture sampler!");
+		}
 	}
 };

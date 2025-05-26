@@ -131,7 +131,7 @@ public:
 		m_swapChainImageFormat = surfaceFormat.format;
 		m_swapChainExtent = extent;
 	}
-	void createImageViews() {
+	void createImageViews() { // can use createImageView() instead
 		m_swapChainImageViews.resize(m_swapChainImages.size());
 
 		for (size_t i = 0; i < m_swapChainImages.size(); i++) {
