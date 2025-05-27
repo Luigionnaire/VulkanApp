@@ -41,7 +41,7 @@ class Texture {
 
 		void createTextureImage() {
 			int texWidth, texHeight, texChannels;
-			stbi_uc* pixels = stbi_load("./assets/textures/statue.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha); // TODO take this from constructor
+			stbi_uc* pixels = stbi_load("./assets/textures/watermelon.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha); // TODO take this from constructor
 			VkDeviceSize imageSize = texWidth * texHeight * 4;
 
 			if (!pixels) {

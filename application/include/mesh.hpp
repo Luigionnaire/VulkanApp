@@ -4,18 +4,20 @@
 #include <vector>
 #include <stdexcept>
 #include "bufferUtils.hpp"
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
 
 class Mesh {
 public:
 	Mesh() = default;
-	Mesh(VkDevice device, VkPhysicalDevice physicalDevice, VkCommandPool commandPool, VkQueue graphicsQueue, const std::vector<Vertex>& vertices, const std::vector<uint16_t>& indices)
+	Mesh(VkDevice device, VkPhysicalDevice physicalDevice, VkCommandPool commandPool, VkQueue graphicsQueue, const std::string& path)
 		: m_device(device), 
 		m_physicalDevice(physicalDevice),
 		m_commandPool(commandPool), 
-		m_graphicsQueue(graphicsQueue), 
-		m_vertices(vertices), 
-		m_indices(indices) 
+		m_graphicsQueue(graphicsQueue)
 	{
+		loadModel(path);
 		BufferUtils::createVertexBuffer(m_device, m_physicalDevice, m_commandPool, m_graphicsQueue, m_vertices, m_vertexBuffer, m_vertexBufferMemory);
 		BufferUtils::createIndexBuffer(m_device, m_physicalDevice, m_commandPool, m_graphicsQueue, m_indices, m_indexBuffer, m_indexBufferMemory);
 	}
@@ -55,4 +57,69 @@ private:
 
 	VkDeviceMemory m_vertexBufferMemory;
 	VkDeviceMemory m_indexBufferMemory;
+
+	void loadModel(const std::string& path) {
+		Assimp::Importer importer;
+		const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_FlipUVs);
+		if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
+			throw std::runtime_error("Failed to load model: " + std::string(importer.GetErrorString()));
+		}
+		processNode(scene->mRootNode, scene);
+	}
+
+	void processNode(aiNode* node, const aiScene* scene) {
+		for (unsigned int i = 0; i < node->mNumMeshes; i++) {
+			aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
+			processMesh(mesh, scene);
+		}
+		for (unsigned int i = 0; i < node->mNumChildren; i++) {
+			processNode(node->mChildren[i], scene);
+		}
+	}
+
+	void processMesh(aiMesh* mesh, const aiScene* /*scene*/) {
+		for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
+			Vertex vertex{};
+
+			// Position (vec3)
+			vertex.pos = {
+				mesh->mVertices[i].x,
+				mesh->mVertices[i].y,
+				mesh->mVertices[i].z
+			};
+
+			// Color (fallback white)
+			if (mesh->HasVertexColors(0)) {
+				vertex.color = {
+					mesh->mColors[0][i].r,
+					mesh->mColors[0][i].g,
+					mesh->mColors[0][i].b
+				};
+			}
+			else {
+				vertex.color = { 1.0f, 1.0f, 1.0f };
+			}
+
+			// Texture coordinates (vec2)
+			if (mesh->HasTextureCoords(0)) {
+				vertex.texCoord = {
+					mesh->mTextureCoords[0][i].x,
+					mesh->mTextureCoords[0][i].y
+				};
+			}
+			else {
+				vertex.texCoord = { 0.0f, 0.0f };
+			}
+
+			m_vertices.push_back(vertex);
+		}
+
+		for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
+			const aiFace& face = mesh->mFaces[i];
+			for (unsigned int j = 0; j < face.mNumIndices; j++) {
+				m_indices.push_back(static_cast<uint16_t>(face.mIndices[j]));
+			}
+		}
+	}
+
 };

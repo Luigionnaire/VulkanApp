@@ -19,6 +19,7 @@
 #include "uniformBuffers.hpp"
 #include "texture.hpp"
 
+
 class Renderer {
 public:
 	void run() {
@@ -40,10 +41,10 @@ private:
 	std::shared_ptr<Texture> m_texture; // texture object
 
 	const std::vector<Vertex> m_vertices = {
-	{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-	{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-	{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-	{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
+	{{-0.5f, -0.5f, 2.f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+	{{0.5f, -0.5f, 0.f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+	{{0.5f, 0.5f, 0.f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+	{{-0.5f, 0.5f, 0.f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
 	};
 
 	const std::vector<uint16_t> m_indices = {
@@ -51,7 +52,7 @@ private:
 		2, 3, 0
 	};
 
-	std::shared_ptr<Mesh> m_triangle;
+	std::shared_ptr<Mesh> m_model;
 	//synchronization
 	std::vector<VkSemaphore> imageAvailableSemaphores;
 	std::vector<VkSemaphore> renderFinishedSemaphores;
@@ -77,10 +78,8 @@ private:
 		m_commandPool = std::make_shared<CommandPool>(m_device->getDevice(), m_device->getPhysicalDevice(), m_window->getSurface()); // create a command pool object
 		m_texture = std::make_shared<Texture>(m_device->getDevice(), m_device->getPhysicalDevice(), m_commandPool->getCommandPool(), m_device->getGraphicsQueue()); // create a texture object
 		m_descriptorManager->createDescriptorSets(m_texture->getTextureImageView(), m_texture->getTextureSampler()); // find a better solution ( sending texture to shaders)
-		m_triangle = std::make_shared<Mesh>(m_device->getDevice(), m_device->getPhysicalDevice(), m_commandPool->getCommandPool(), m_device->getGraphicsQueue(), m_vertices, m_indices);
+		m_model = std::make_shared<Mesh>(m_device->getDevice(), m_device->getPhysicalDevice(), m_commandPool->getCommandPool(), m_device->getGraphicsQueue(), "./assets/models/watermelon.obj");
 		createSyncObjects();
-		//createDescriptorPool();
-		//createDescriptorSets();
 	}
 	void mainLoop() {
 		// Main loop
@@ -160,7 +159,7 @@ private:
 		m_texture->destroyTexture(); // destroy texture
 		m_uniformBuffers->destroyUniformBuffers();
 		m_descriptorManager->destroyDescriptorManager();
-		m_triangle->freeMemory();
+		m_model->freeMemory();
 		m_pipeline->destroyPipeline();
 		vkDestroyRenderPass(m_device->getDevice(), m_renderPass->getRenderPass(), nullptr);
 		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) // cleanup semaphores and fences
@@ -241,12 +240,12 @@ private:
 		vkCmdSetScissor(commandBuffer, 0, 1, &scissor); // set the scissor
 
 		////BUFFERS
-		m_triangle->bindBuffers(commandBuffer); // bind the buffers
+		m_model->bindBuffers(commandBuffer); // bind the buffers
 
 		//DESCRIPTOR SETS
 		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->getPipelineLayout(), 0, 1, &m_descriptorManager->getDescriptorSet(currentFrame), 0, nullptr); // bind the descriptor sets
 
-		m_triangle->draw(commandBuffer); // draw the triangle
+		m_model->draw(commandBuffer); // draw the triangle
 
 		vkCmdEndRenderPass(commandBuffer); // end render pass
 		if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
@@ -270,135 +269,4 @@ private:
 		m_swapChain->createFrameBuffers(m_renderPass->getRenderPass());
 	}
 
-
-	//VkImage m_textureImage;
-	//VkDeviceMemory m_textureImageMemory;
-
-	//VkImageView m_textureImageView; // getter
-	//VkSampler m_textureSampler; // getter 
-
-
-	//void createTextureImage() {
-	//	int texWidth, texHeight, texChannels;
-	//	stbi_uc* pixels = stbi_load("./assets/textures/statue.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-	//	VkDeviceSize imageSize = texWidth * texHeight * 4;
-
-	//	if (!pixels) {
-	//		throw std::runtime_error("failed to load texture image!");
-	//	}
-
-	//	VkBuffer stagingBuffer;
-	//	VkDeviceMemory stagingBufferMemory;
-	//	BufferUtils::createBuffer(m_device->getDevice(), m_device->getPhysicalDevice(), imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
-	//	
-	//	void* data;
-	//	vkMapMemory(m_device->getDevice(), stagingBufferMemory, 0, imageSize, 0, &data);
-	//	memcpy(data, pixels, static_cast<size_t>(imageSize));
-	//	vkUnmapMemory(m_device->getDevice(), stagingBufferMemory);
-	//	
-	//	stbi_image_free(pixels);
-
-	//	createImage(texWidth, texHeight, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_textureImage, m_textureImageMemory);
-	//	BufferUtils::transitionImageLayout(m_device->getDevice(), m_commandPool->getCommandPool(), m_device->getGraphicsQueue(), m_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL); // transition to transfer layout
-	//	BufferUtils::copyBufferToImage(m_device->getDevice(), m_commandPool->getCommandPool(), m_device->getGraphicsQueue(), stagingBuffer, m_textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
-	//	BufferUtils::transitionImageLayout(m_device->getDevice(), m_commandPool->getCommandPool(), m_device->getGraphicsQueue(), m_textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL); // transition to shader layout
-	//
-	//	vkDestroyBuffer(m_device->getDevice(), stagingBuffer, nullptr);
-	//	vkFreeMemory(m_device->getDevice(), stagingBufferMemory, nullptr);
-	//
-	//}
-
-	//void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory) {
-	//	VkImageCreateInfo imageInfo{};
-	//	imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-	//	imageInfo.imageType = VK_IMAGE_TYPE_2D;
-	//	imageInfo.extent.width = width;
-	//	imageInfo.extent.height = height;
-	//	imageInfo.extent.depth = 1;
-	//	imageInfo.mipLevels = 1;
-	//	imageInfo.arrayLayers = 1;
-	//	imageInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
-	//	imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-	//	imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	//	imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-	//	imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-	//	imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-	//	imageInfo.flags = 0; // for multisampling
-	//
-	//	if (vkCreateImage(m_device->getDevice(), &imageInfo, nullptr, &image) != VK_SUCCESS)
-	//	{
-	//		throw std::runtime_error("falied to create image!");
-	//	}
-
-	//	VkMemoryRequirements memRequirements;
-	//	vkGetImageMemoryRequirements(m_device->getDevice(), image, &memRequirements);
-
-	//	VkMemoryAllocateInfo allocInfo{};
-	//	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	//	allocInfo.allocationSize = memRequirements.size;
-	//	allocInfo.memoryTypeIndex = BufferUtils::findMemoryType(m_device->getPhysicalDevice(), memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-	//	if (vkAllocateMemory(m_device->getDevice(), &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
-	//		throw std::runtime_error("failed to allocate image memory!");
-	//	}
-
-	//	vkBindImageMemory(m_device->getDevice(), image, imageMemory, 0);
-
-	//}
-
-
-	//VkImageView createImageView(VkDevice device, VkImage image, VkFormat format) {
-	//	VkImageViewCreateInfo viewInfo{};
-	//	viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-	//	viewInfo.image = image;
-	//	viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-	//	viewInfo.format = format;
-	//	viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	//	viewInfo.subresourceRange.baseMipLevel = 0;
-	//	viewInfo.subresourceRange.levelCount = 1;
-	//	viewInfo.subresourceRange.baseArrayLayer = 0;
-	//	viewInfo.subresourceRange.layerCount = 1;
-
-	//	VkImageView imageView;
-	//	if (vkCreateImageView(device, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
-	//		throw std::runtime_error("failed to create texture image view!");
-	//	}
-
-	//	return imageView;
-	//}
-
-	//void createTextureImageView() {
-	//	m_textureImageView = createImageView(m_device->getDevice(), m_textureImage, VK_FORMAT_R8G8B8A8_SRGB); // create the texture image view
-	//}
-
-
-	//void createTextureSampler() {
-	//	VkSamplerCreateInfo samplerInfo{};
-	//	samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-	//	samplerInfo.magFilter = VK_FILTER_LINEAR; // linear filtering
-	//	samplerInfo.minFilter = VK_FILTER_LINEAR; // linear filtering
-	//	samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT; // repeat the texture
-	//	samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT; // repeat the texture
-	//	samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT; // repeat the texture
-
-	//	samplerInfo.anisotropyEnable = VK_TRUE; // enable anisotropy
-
-	//	VkPhysicalDeviceProperties properties{}; // can query at the start if used multiple times
-	//	vkGetPhysicalDeviceProperties(m_device->getPhysicalDevice(), &properties); // get the physical device properties
-	//	samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy; // set it to the max allowed by device
-	//
-	//	samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK; // border color
-	//	samplerInfo.unnormalizedCoordinates = VK_FALSE; // normalized coordinates
-	//	samplerInfo.compareEnable = VK_FALSE; // no comparison
-	//	samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS; // percentage-closer filtering
-
-	//	samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR; // linear mipmapping
-	//	samplerInfo.mipLodBias = 0.0f; // no mipmap bias
-	//	samplerInfo.minLod = 0.0f; // no min lod
-	//	samplerInfo.maxLod = 0.0f; // no max lod
-
-	//	if (vkCreateSampler(m_device->getDevice(), &samplerInfo, nullptr, &m_textureSampler) != VK_SUCCESS) {
-	//		throw std::runtime_error("failed to create texture sampler!");
-	//	}
-	//}
 };

@@ -119,3 +119,20 @@ target_link_libraries(${APPLICATION_NAME} PRIVATE stb_image_impl)
 
 # Organize in Visual Studio
 set_target_properties(stb_image_impl PROPERTIES FOLDER "stb_image")
+
+
+
+# ========== Assimp ==========
+FetchContent_Declare(
+    assimp
+    GIT_REPOSITORY https://github.com/assimp/assimp.git
+    GIT_TAG v5.3.1
+)
+
+set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(ASSIMP_NO_EXPORT ON CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE BOOL "" FORCE)
+
+FetchContent_MakeAvailable(assimp)
+
+target_link_libraries(${APPLICATION_NAME} PRIVATE assimp)
