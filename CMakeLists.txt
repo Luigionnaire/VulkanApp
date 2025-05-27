@@ -24,6 +24,8 @@ set (PROJECT_HEADER_FILES
 	./application/include/mesh.hpp
 	./application/include/descriptorLayout.hpp
 	./application/include/uniformBuffers.hpp
+	./application/include/texture.hpp
+	./application/include/imageUtils.hpp
 
 )
 set (PROJECT_SOURCE_FILES
