@@ -115,6 +115,18 @@ public:
 		colorBlending.blendConstants[3] = 0.0f; // Optional
 
 
+		VkPipelineDepthStencilStateCreateInfo depthStencil{};
+		depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+		depthStencil.depthTestEnable = VK_TRUE; // enable depth testing
+		depthStencil.depthWriteEnable = VK_TRUE; // enable depth writing
+		depthStencil.depthCompareOp = VK_COMPARE_OP_LESS; // less than comparison
+		depthStencil.depthBoundsTestEnable = VK_FALSE; // optional
+		depthStencil.minDepthBounds = 0.0f; // optional
+		depthStencil.maxDepthBounds = 1.0f; // optional
+		depthStencil.stencilTestEnable = VK_FALSE; // optional
+		depthStencil.front = {}; // optional
+		depthStencil.back = {}; // optional
+
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipelineLayoutInfo.setLayoutCount = 1; // number of descriptor set layouts
@@ -134,7 +146,7 @@ public:
 		pipelineInfo.pViewportState = &viewportState;
 		pipelineInfo.pRasterizationState = &rasterizer;
 		pipelineInfo.pMultisampleState = &multisampling;
-		pipelineInfo.pDepthStencilState = nullptr;
+		pipelineInfo.pDepthStencilState = &depthStencil;
 		pipelineInfo.pColorBlendState = &colorBlending;
 		pipelineInfo.pDynamicState = &dynamicState;
 

@@ -18,6 +18,32 @@ public:
 		m_graphicsQueue(graphicsQueue)
 	{
 		loadModel(path);
+		//m_vertices = {
+		//	// pos                 // normal             // texCoord
+		//	{{-0.5f, -0.5f, -0.5f}, {-1, -1, -1}, {0.0f, 0.0f}}, // 0
+		//	{{ 0.5f, -0.5f, -0.5f}, { 1, -1, -1}, {1.0f, 0.0f}}, // 1
+		//	{{ 0.5f,  0.5f, -0.5f}, { 1,  1, -1}, {1.0f, 1.0f}}, // 2
+		//	{{-0.5f,  0.5f, -0.5f}, {-1,  1, -1}, {0.0f, 1.0f}}, // 3
+		//	{{-0.5f, -0.5f,  0.5f}, {-1, -1,  1}, {0.0f, 0.0f}}, // 4
+		//	{{ 0.5f, -0.5f,  0.5f}, { 1, -1,  1}, {1.0f, 0.0f}}, // 5
+		//	{{ 0.5f,  0.5f,  0.5f}, { 1,  1,  1}, {1.0f, 1.0f}}, // 6
+		//	{{-0.5f,  0.5f,  0.5f}, {-1,  1,  1}, {0.0f, 1.0f}}, // 7
+		//};
+
+		//m_indices = {
+		//	// Front (+Z)
+		//	4, 5, 6, 6, 7, 4,
+		//	// Back (-Z)
+		//	1, 0, 3, 3, 2, 1,
+		//	// Left (-X)
+		//	0, 4, 7, 7, 3, 0,
+		//	// Right (+X)
+		//	5, 1, 2, 2, 6, 5,
+		//	// Top (+Y)
+		//	3, 7, 6, 6, 2, 3,
+		//	// Bottom (-Y)
+		//	0, 1, 5, 5, 4, 0
+		//};
 		BufferUtils::createVertexBuffer(m_device, m_physicalDevice, m_commandPool, m_graphicsQueue, m_vertices, m_vertexBuffer, m_vertexBufferMemory);
 		BufferUtils::createIndexBuffer(m_device, m_physicalDevice, m_commandPool, m_graphicsQueue, m_indices, m_indexBuffer, m_indexBufferMemory);
 	}
@@ -43,6 +69,8 @@ public:
 	{
 		vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(m_indices.size()), 1, 0, 0, 0);
 	}
+
+
 private:
 	VkDevice m_device;
 	VkPhysicalDevice m_physicalDevice;
@@ -60,48 +88,44 @@ private:
 
 	void loadModel(const std::string& path) {
 		Assimp::Importer importer;
-		const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_FlipUVs);
+		const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs);
 		if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
 			throw std::runtime_error("Failed to load model: " + std::string(importer.GetErrorString()));
 		}
 		processNode(scene->mRootNode, scene);
 	}
 
+
 	void processNode(aiNode* node, const aiScene* scene) {
 		for (unsigned int i = 0; i < node->mNumMeshes; i++) {
 			aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
 			processMesh(mesh, scene);
 		}
+
 		for (unsigned int i = 0; i < node->mNumChildren; i++) {
 			processNode(node->mChildren[i], scene);
 		}
 	}
 
-	void processMesh(aiMesh* mesh, const aiScene* /*scene*/) {
+	void processMesh(aiMesh* mesh, const aiScene* scene) {
 		for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
 			Vertex vertex{};
 
-			// Position (vec3)
 			vertex.pos = {
 				mesh->mVertices[i].x,
 				mesh->mVertices[i].y,
 				mesh->mVertices[i].z
 			};
 
-			// Color (fallback white)
-			if (mesh->HasVertexColors(0)) {
-				vertex.color = {
-					mesh->mColors[0][i].r,
-					mesh->mColors[0][i].g,
-					mesh->mColors[0][i].b
+			if (mesh->HasNormals()) {
+				vertex.normal = {
+					mesh->mNormals[i].x,
+					mesh->mNormals[i].y,
+					mesh->mNormals[i].z
 				};
 			}
-			else {
-				vertex.color = { 1.0f, 1.0f, 1.0f };
-			}
 
-			// Texture coordinates (vec2)
-			if (mesh->HasTextureCoords(0)) {
+			if (mesh->mTextureCoords[0]) {
 				vertex.texCoord = {
 					mesh->mTextureCoords[0][i].x,
 					mesh->mTextureCoords[0][i].y
@@ -115,7 +139,7 @@ private:
 		}
 
 		for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
-			const aiFace& face = mesh->mFaces[i];
+			aiFace face = mesh->mFaces[i];
 			for (unsigned int j = 0; j < face.mNumIndices; j++) {
 				m_indices.push_back(static_cast<uint16_t>(face.mIndices[j]));
 			}

@@ -135,15 +135,15 @@ public:
 		m_swapChainImageViews.resize(m_swapChainImages.size());
 
 		for (size_t i = 0; i < m_swapChainImages.size(); i++) {
-			m_swapChainImageViews[i] = ImageUtils::createImageView(m_device, m_swapChainImages[i], m_swapChainImageFormat); // create image views for each image in the swap chain
+			m_swapChainImageViews[i] = ImageUtils::createImageView(m_device, m_swapChainImages[i], m_swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT); // create image views for each image in the swap chain
 		}
 	}
 
-	void createFrameBuffers(VkRenderPass renderPass) {
+	void createFrameBuffers(VkRenderPass renderPass, VkImageView depthImageView) {
 		m_swapChainFramebuffers.resize(m_swapChainImageViews.size());
 		for (size_t i = 0; i < m_swapChainImageViews.size(); i++)
 		{
-			VkImageView attachments[] = {
+			/*VkImageView attachments[] = {
 				m_swapChainImageViews[i]
 			};
 
@@ -154,6 +154,20 @@ public:
 			framebufferInfo.pAttachments = attachments;
 			framebufferInfo.width = m_swapChainExtent.width;
 			framebufferInfo.height = m_swapChainExtent.height;
+			framebufferInfo.layers = 1;*/
+
+			std::array<VkImageView, 2> attachments = {
+			m_swapChainImageViews[i],
+			depthImageView
+			};
+
+			VkFramebufferCreateInfo framebufferInfo{};
+			framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+			framebufferInfo.renderPass = renderPass;
+			framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+			framebufferInfo.pAttachments = attachments.data();
+			framebufferInfo.width = m_swapChainExtent.width;
+			framebufferInfo.height = m_swapChainExtent.height;
 			framebufferInfo.layers = 1;
 
 			if (vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_swapChainFramebuffers[i]) != VK_SUCCESS) {
@@ -162,6 +176,12 @@ public:
 		}
 	}
 	void cleanupSwapChain() {
+
+		// TODO destroy image view
+		//vkDestroyImageView(device, depthImageView, nullptr);
+		//vkDestroyImage(device, depthImage, nullptr);
+		//vkFreeMemory(device, depthImageMemory, nullptr);
+
 		for (size_t i = 0; i < m_swapChainFramebuffers.size(); i++) {
 			vkDestroyFramebuffer(m_device, m_swapChainFramebuffers[i], nullptr);
 		}
@@ -196,5 +216,6 @@ private:
 	VkExtent2D m_swapChainExtent;
 	std::vector<VkImageView> m_swapChainImageViews;
 	std::vector<VkFramebuffer> m_swapChainFramebuffers;
+
 
 };

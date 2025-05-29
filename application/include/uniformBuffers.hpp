@@ -18,6 +18,9 @@ class UniformBuffers {
 public:
 	UniformBuffers(VkDevice device, VkPhysicalDevice physicalDevice) : m_device(device) , m_physicalDevice(physicalDevice) {
 		createUniformBuffers();
+		ubo = {};
+		
+
 	}
 	void destroyUniformBuffers() {
 		for (size_t i = 0; i < m_uniformBuffers.size(); i++) {
@@ -31,9 +34,10 @@ public:
 
 		auto currentTime = std::chrono::high_resolution_clock::now(); // current time
 		float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count(); // time since start
-		UBO ubo = {};
-		ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.f), glm::vec3(0.0f, 0.0f, 1.0f)); 
-		ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		ubo.model = glm::mat4(1.0f); // initialize model matrix to identity
+		//ubo.model = glm::scale(ubo.model, glm::vec3(1.f, 2.f, 2.f)); // scale the model
+		ubo.model = glm::rotate(ubo.model, time * glm::radians(7.f), glm::vec3(0.0f, 1.0f, 0.0f)); // rotate the model based on timeu
+		ubo.view = glm::lookAt(glm::vec3(0.0f, 1.5f, -3.f), glm::vec3(0.0f, -2.0f, 10.0f), glm::vec3(0.0f, 1.f, 0.0f));
 		ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
 		ubo.proj[1][1] *= -1; // flip the y axis because openGL standards in glm
 		memcpy(m_uniformBuffersMapped[currentImage], &ubo, sizeof(ubo)); // copy the data to the buffer
@@ -54,7 +58,7 @@ private:
 	std::vector<void*> m_uniformBuffersMapped;
 	VkDevice m_device;
 	VkPhysicalDevice m_physicalDevice;
-
+	UBO ubo; // uniform buffer object
 	void createUniformBuffers() {
 		VkDeviceSize bufferSize = sizeof(UBO); // size of the uniform buffer object
 		m_uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);

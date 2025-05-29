@@ -30,9 +30,9 @@ public:
 	}
 private:
 	std::shared_ptr<Window> m_window; // window object and surface
-	std::shared_ptr<VKInstance> m_instance; 
+	std::shared_ptr<VKInstance> m_instance;
 	std::shared_ptr<Device> m_device; // logical and physical device object
-	std::shared_ptr<VKSwapChain> m_swapChain; 
+	std::shared_ptr<VKSwapChain> m_swapChain;
 	std::shared_ptr<RenderPass> m_renderPass; // render pass object
 	std::shared_ptr<Pipeline> m_pipeline; // pipeline object
 	std::shared_ptr<CommandPool> m_commandPool; // command pool object
@@ -40,24 +40,24 @@ private:
 	std::shared_ptr<UniformBuffers> m_uniformBuffers; // uniform buffer object
 	std::shared_ptr<Texture> m_texture; // texture object
 
-	const std::vector<Vertex> m_vertices = {
-	{{-0.5f, -0.5f, 2.f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-	{{0.5f, -0.5f, 0.f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-	{{0.5f, 0.5f, 0.f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-	{{-0.5f, 0.5f, 0.f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
-	};
+	//const std::vector<Vertex> m_vertices = {
+	//{{-0.5f, -0.5f, 2.f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+	//{{0.5f, -0.5f, 0.f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+	//{{0.5f, 0.5f, 0.f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+	//{{-0.5f, 0.5f, 0.f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
+	//};
 
-	const std::vector<uint16_t> m_indices = {
-		0, 1, 2,
-		2, 3, 0
-	};
+	//const std::vector<uint16_t> m_indices = {
+	//	0, 1, 2,
+	//	2, 3, 0
+	//};
 
 	std::shared_ptr<Mesh> m_model;
 	//synchronization
 	std::vector<VkSemaphore> imageAvailableSemaphores;
 	std::vector<VkSemaphore> renderFinishedSemaphores;
 	std::vector<VkFence> inFlightFences;
-	 
+
 	bool framebufferResized = false;
 
 	uint32_t currentFrame = 0;
@@ -65,20 +65,21 @@ private:
 	void initWindow() {
 		m_window = std::make_shared<Window>(); // create a window object
 	}
-	void initVulkan()  {
+	void initVulkan() {
 		m_instance = std::make_shared<VKInstance>(); // create a instance object
 		m_window->createSurface(m_instance->getInstance()); // window
 		m_device = std::make_shared<Device>(m_instance->getInstance(), m_window->getSurface()); // create a device object
 		m_swapChain = std::make_shared<VKSwapChain>(m_window->getSurface(), m_device->getPhysicalDevice(), m_device->getDevice(), m_window->getWindow());
-		m_renderPass = std::make_shared<RenderPass>(m_device->getDevice(), m_swapChain->getSwapChainImageFormat()); // create a render pass object
+		m_renderPass = std::make_shared<RenderPass>(m_device->getDevice(), m_swapChain->getSwapChainImageFormat(), findDepthFormat()); // create a render pass object
 		m_uniformBuffers = std::make_shared<UniformBuffers>(m_device->getDevice(), m_device->getPhysicalDevice());
 		m_descriptorManager = std::make_shared<DescriptorManager>(m_device->getDevice(), m_uniformBuffers->getUniformBuffers());
 		m_pipeline = std::make_shared<Pipeline>(m_renderPass->getRenderPass(), m_device->getDevice(), m_swapChain->getSwapChainExtent(), m_swapChain->getSwapChainImageViews(), m_descriptorManager->getDescriptorSetLayout()); // create a pipeline object
-		m_swapChain->createFrameBuffers(m_renderPass->getRenderPass());
 		m_commandPool = std::make_shared<CommandPool>(m_device->getDevice(), m_device->getPhysicalDevice(), m_window->getSurface()); // create a command pool object
+		createDepthResources();
+		m_swapChain->createFrameBuffers(m_renderPass->getRenderPass(), m_depthImageView);
 		m_texture = std::make_shared<Texture>(m_device->getDevice(), m_device->getPhysicalDevice(), m_commandPool->getCommandPool(), m_device->getGraphicsQueue()); // create a texture object
 		m_descriptorManager->createDescriptorSets(m_texture->getTextureImageView(), m_texture->getTextureSampler()); // find a better solution ( sending texture to shaders)
-		m_model = std::make_shared<Mesh>(m_device->getDevice(), m_device->getPhysicalDevice(), m_commandPool->getCommandPool(), m_device->getGraphicsQueue(), "./assets/models/watermelon.obj");
+		m_model = std::make_shared<Mesh>(m_device->getDevice(), m_device->getPhysicalDevice(), m_commandPool->getCommandPool(), m_device->getGraphicsQueue(), "./assets/models/Barrel.obj");
 		createSyncObjects();
 	}
 	void mainLoop() {
@@ -86,14 +87,14 @@ private:
 		while (!glfwWindowShouldClose(m_window->getWindow())) {
 			glfwPollEvents(); // Poll for events
 			drawFrame();
-		}	
+		}
 
 		vkDeviceWaitIdle(m_device->getDevice()); // wait for the device to finish
 	}
-	
+
 	void drawFrame() {
 		vkWaitForFences(m_device->getDevice(), 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX); // wait for previous frame
-		
+
 		uint32_t imageIndex;
 
 		VkResult result = vkAcquireNextImageKHR(m_device->getDevice(), m_swapChain->getSwapChain(), UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex); // acquire the next image from the swapchain  !!memory access!! 
@@ -104,25 +105,26 @@ private:
 		else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) { // check for errors
 			throw std::runtime_error("failed to acquire swap chain image!");
 		}
-		m_uniformBuffers->updateUniformBuffer(currentFrame, m_swapChain->getSwapChainExtent()); // update the uniforms
+
+		update();
 
 		vkResetFences(m_device->getDevice(), 1, &inFlightFences[currentFrame]); // only reset fence if we are submitting work !!memory access!!
 
 		vkResetCommandBuffer(m_commandPool->getCommandBuffer(currentFrame), 0);
 		recordCommandBuffer(m_commandPool->getCommandBuffer(currentFrame), imageIndex);
 
-		VkSubmitInfo submitInfo{}; 
+		VkSubmitInfo submitInfo{};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-		VkSemaphore waitSemaphores[] = { imageAvailableSemaphores[currentFrame]}; // wait for the image to be available
+		VkSemaphore waitSemaphores[] = { imageAvailableSemaphores[currentFrame] }; // wait for the image to be available
 		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT }; // wait for the color attachment output stage
 		submitInfo.waitSemaphoreCount = 1; // number of semaphores to wait for
 		submitInfo.pWaitSemaphores = waitSemaphores; // semaphores to wait for
 		submitInfo.pWaitDstStageMask = waitStages; // stages to wait for
-		submitInfo.commandBufferCount = 1; 
+		submitInfo.commandBufferCount = 1;
 		submitInfo.pCommandBuffers = &m_commandPool->getCommandBuffer(currentFrame);
 
-		VkSemaphore signalSemaphores[] = { renderFinishedSemaphores[currentFrame]}; // signal the render finished semaphore
+		VkSemaphore signalSemaphores[] = { renderFinishedSemaphores[currentFrame] }; // signal the render finished semaphore
 		submitInfo.signalSemaphoreCount = 1; // number of semaphores to signal
 		submitInfo.pSignalSemaphores = signalSemaphores; // semaphores to signal
 		if (vkQueueSubmit(m_device->getGraphicsQueue(), 1, &submitInfo, inFlightFences[currentFrame]) != VK_SUCCESS) { // submit the command buffer  !!memory access!!
@@ -133,14 +135,14 @@ private:
 		presentInfo.waitSemaphoreCount = 1;
 		presentInfo.pWaitSemaphores = signalSemaphores;
 
-		VkSwapchainKHR swapChains[] = { m_swapChain->getSwapChain()};
+		VkSwapchainKHR swapChains[] = { m_swapChain->getSwapChain() };
 		presentInfo.swapchainCount = 1;
 		presentInfo.pSwapchains = swapChains;
 		presentInfo.pImageIndices = &imageIndex;
 		presentInfo.pResults = nullptr; // allow to choose between multiple swapchains
 		result = vkQueuePresentKHR(m_device->getPresentQueue(), &presentInfo); // present the image  !!memory access!!
 
-		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) { 
+		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
 			framebufferResized = false;
 			recreateSwapChain();
 		}
@@ -151,7 +153,11 @@ private:
 
 		currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT; // increment the current frame
 	}
-	
+
+	void update() {
+		// Update the uniform buffer
+		m_uniformBuffers->updateUniformBuffer(currentFrame, m_swapChain->getSwapChainExtent());
+	}
 	// cleanup functions
 	void cleanup() {
 		m_swapChain->cleanupSwapChain();
@@ -216,9 +222,12 @@ private:
 		renderPassInfo.framebuffer = m_swapChain->getSwapChainFramebuffers()[imageIndex];
 		renderPassInfo.renderArea.offset = { 0, 0 };
 		renderPassInfo.renderArea.extent = swapChainExtent;
-		VkClearValue clearColor = { 0.012f, 0.018f, 0.02f, 1.0f }; // clear color
-		renderPassInfo.clearValueCount = 1;
-		renderPassInfo.pClearValues = &clearColor; // clear color
+		std::array<VkClearValue, 2> clearValues{}; // clear color
+		clearValues[0].color = { 0.012f, 0.018f, 0.02f, 1.0f }; // clear color
+		clearValues[1].depthStencil = { 1.0f, 0 }; // clear depth
+
+		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+		renderPassInfo.pClearValues = clearValues.data(); // clear color
 
 		vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE); // begin render pass
 
@@ -266,7 +275,66 @@ private:
 		m_swapChain->cleanupSwapChain();
 		m_swapChain->createSwapChain(m_window->getSurface(), m_device->getPhysicalDevice(),m_window->getWindow());
 		m_swapChain->createImageViews();
-		m_swapChain->createFrameBuffers(m_renderPass->getRenderPass());
+		createDepthResources();
+		m_swapChain->createFrameBuffers(m_renderPass->getRenderPass(), m_depthImageView);
 	}
 
+
+	// abstract all this in swapchain
+
+	VkImage m_depthImage;
+	VkDeviceMemory m_depthImageMemory;
+	VkImageView m_depthImageView;
+
+	void createDepthResources() {
+		VkFormat depthFormat = findDepthFormat();
+
+		ImageUtils::createImage(m_device->getDevice(),
+			m_device->getPhysicalDevice(),
+			m_swapChain->getSwapChainExtent().width,
+			m_swapChain->getSwapChainExtent().height,
+			depthFormat,
+			VK_IMAGE_TILING_OPTIMAL,
+			VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			m_depthImage,
+			m_depthImageMemory
+		);
+		m_depthImageView = ImageUtils::createImageView(m_device->getDevice(), m_depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+		BufferUtils::transitionImageLayout(m_device->getDevice(),
+			m_commandPool->getCommandPool(),
+			m_device->getGraphicsQueue(),
+			m_depthImage, depthFormat, 
+			VK_IMAGE_LAYOUT_UNDEFINED, 
+			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL); // optional
+
+	}
+
+	VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
+	{
+		for (VkFormat format : candidates) {
+			VkFormatProperties props;
+			vkGetPhysicalDeviceFormatProperties(m_device->getPhysicalDevice(), format, &props);
+			if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
+				return format;
+			}
+			else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
+				return format;
+			}
+		}
+		throw std::runtime_error("failed to find supported format!");
+	}
+
+	VkFormat findDepthFormat()
+	{
+		return findSupportedFormat(
+			{ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
+			VK_IMAGE_TILING_OPTIMAL,
+			VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
+		);
+	}
+
+	bool hasStencilComponent(VkFormat format) {
+		return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
+	}
 };
