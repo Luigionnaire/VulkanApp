@@ -70,13 +70,14 @@ private:
 		m_window->createSurface(m_instance->getInstance()); // window
 		m_device = std::make_shared<Device>(m_instance->getInstance(), m_window->getSurface()); // create a device object
 		m_swapChain = std::make_shared<VKSwapChain>(m_window->getSurface(), m_device->getPhysicalDevice(), m_device->getDevice(), m_window->getWindow());
-		m_renderPass = std::make_shared<RenderPass>(m_device->getDevice(), m_swapChain->getSwapChainImageFormat(), findDepthFormat()); // create a render pass object
+		m_renderPass = std::make_shared<RenderPass>(m_device->getDevice(), m_swapChain->getSwapChainImageFormat(), m_swapChain->findDepthFormat()); // create a render pass object
 		m_uniformBuffers = std::make_shared<UniformBuffers>(m_device->getDevice(), m_device->getPhysicalDevice());
 		m_descriptorManager = std::make_shared<DescriptorManager>(m_device->getDevice(), m_uniformBuffers->getUniformBuffers());
 		m_pipeline = std::make_shared<Pipeline>(m_renderPass->getRenderPass(), m_device->getDevice(), m_swapChain->getSwapChainExtent(), m_swapChain->getSwapChainImageViews(), m_descriptorManager->getDescriptorSetLayout()); // create a pipeline object
 		m_commandPool = std::make_shared<CommandPool>(m_device->getDevice(), m_device->getPhysicalDevice(), m_window->getSurface()); // create a command pool object
-		createDepthResources();
-		m_swapChain->createFrameBuffers(m_renderPass->getRenderPass(), m_depthImageView);
+		//createDepthResources();
+		m_swapChain->createDepthResources(m_commandPool->getCommandPool(), m_device->getGraphicsQueue());
+		m_swapChain->createFrameBuffers(m_renderPass->getRenderPass(), m_swapChain->getDepthImageView());
 		m_texture = std::make_shared<Texture>(m_device->getDevice(), m_device->getPhysicalDevice(), m_commandPool->getCommandPool(), m_device->getGraphicsQueue()); // create a texture object
 		m_descriptorManager->createDescriptorSets(m_texture->getTextureImageView(), m_texture->getTextureSampler()); // find a better solution ( sending texture to shaders)
 		m_model = std::make_shared<Mesh>(m_device->getDevice(), m_device->getPhysicalDevice(), m_commandPool->getCommandPool(), m_device->getGraphicsQueue(), "./assets/models/Barrel.obj");
@@ -99,7 +100,7 @@ private:
 
 		VkResult result = vkAcquireNextImageKHR(m_device->getDevice(), m_swapChain->getSwapChain(), UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex); // acquire the next image from the swapchain  !!memory access!! 
 		if (result == VK_ERROR_OUT_OF_DATE_KHR) { // check if the swapchain is out of date
-			recreateSwapChain(); // recreate the swapchain
+			m_swapChain->recreateSwapChain(m_window->getSurface(), m_commandPool->getCommandPool(), m_device->getGraphicsQueue()); // recreate the swapchain
 			return;
 		}
 		else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) { // check for errors
@@ -144,7 +145,7 @@ private:
 
 		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
 			framebufferResized = false;
-			recreateSwapChain();
+			m_swapChain->recreateSwapChain(m_window->getSurface(), m_commandPool->getCommandPool(), m_device->getGraphicsQueue());
 		}
 		else if (result != VK_SUCCESS) {
 			throw std::runtime_error("failed to present swap chain image!");
@@ -262,79 +263,5 @@ private:
 		}
 	}
 
-	// window resize
-	void recreateSwapChain() {
-		int width = 0, height = 0;
-		glfwGetFramebufferSize(m_window->getWindow(), &width, &height); // get the window size
-		while (width == 0 || height == 0) { // wait for the window to be resized
-			glfwGetFramebufferSize(m_window->getWindow(), &width, &height);
-			glfwWaitEvents();
-		}
-		vkDeviceWaitIdle(m_device->getDevice());
 
-		m_swapChain->cleanupSwapChain();
-		m_swapChain->createSwapChain(m_window->getSurface(), m_device->getPhysicalDevice(),m_window->getWindow());
-		m_swapChain->createImageViews();
-		createDepthResources();
-		m_swapChain->createFrameBuffers(m_renderPass->getRenderPass(), m_depthImageView);
-	}
-
-
-	// abstract all this in swapchain
-
-	VkImage m_depthImage;
-	VkDeviceMemory m_depthImageMemory;
-	VkImageView m_depthImageView;
-
-	void createDepthResources() {
-		VkFormat depthFormat = findDepthFormat();
-
-		ImageUtils::createImage(m_device->getDevice(),
-			m_device->getPhysicalDevice(),
-			m_swapChain->getSwapChainExtent().width,
-			m_swapChain->getSwapChainExtent().height,
-			depthFormat,
-			VK_IMAGE_TILING_OPTIMAL,
-			VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-			m_depthImage,
-			m_depthImageMemory
-		);
-		m_depthImageView = ImageUtils::createImageView(m_device->getDevice(), m_depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
-		BufferUtils::transitionImageLayout(m_device->getDevice(),
-			m_commandPool->getCommandPool(),
-			m_device->getGraphicsQueue(),
-			m_depthImage, depthFormat, 
-			VK_IMAGE_LAYOUT_UNDEFINED, 
-			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL); // optional
-
-	}
-
-	VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
-	{
-		for (VkFormat format : candidates) {
-			VkFormatProperties props;
-			vkGetPhysicalDeviceFormatProperties(m_device->getPhysicalDevice(), format, &props);
-			if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
-				return format;
-			}
-			else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
-				return format;
-			}
-		}
-		throw std::runtime_error("failed to find supported format!");
-	}
-
-	VkFormat findDepthFormat()
-	{
-		return findSupportedFormat(
-			{ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
-			VK_IMAGE_TILING_OPTIMAL,
-			VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
-		);
-	}
-
-	bool hasStencilComponent(VkFormat format) {
-		return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
-	}
 };
