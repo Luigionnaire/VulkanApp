@@ -1,19 +1,11 @@
 #pragma once
+
 #include <GLFW/glfw3.h>
-#include <stdexcept>
-#include <string>
+#include <vulkan/vulkan.h>
 
 class Window {
 public:
-    Window() {
-        //Initialise GLFW
-        glfwInit();
-        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);  //create a window without OpenGL context
-        glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE); // disable resizing
-        m_window = glfwCreateWindow(width, height, "Vulkan App", nullptr, nullptr);
-        glfwSetWindowUserPointer(m_window, this);
-        glfwSetFramebufferSizeCallback(m_window, framebufferResizeCallback);
-    }
+    Window();
 
 	GLFWwindow* getWindow() {
 		return m_window;
@@ -27,19 +19,9 @@ public:
         auto appWindow = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
         appWindow->framebufferResized = true;
     }
+    void createSurface(const VkInstance& instance);
 
-    void createSurface(const VkInstance& instance) { //create window
-        if (glfwCreateWindowSurface(instance, m_window, nullptr, &m_surface) != VK_SUCCESS)
-        {
-            throw std::runtime_error("failed to create window surface!"); // throw an error
-        }
-    }
-
-    void destroySurface(const VkInstance& instance)
-    {
-        vkDestroySurfaceKHR(instance, m_surface, nullptr);
-    }
-
+    void destroySurface(const VkInstance& instance);
 private:
     GLFWwindow* m_window;
 	VkSurfaceKHR m_surface = nullptr;

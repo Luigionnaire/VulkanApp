@@ -30,28 +30,19 @@ set (PROJECT_HEADER_FILES
 
 )
 set (PROJECT_SOURCE_FILES
-    	./application/src/main.cpp
+    ./application/src/main.cpp
 	./application/src/renderer.cpp
 	./application/src/window.cpp
-	./application/src/debugManager.cpp
-	./application/src/validationLayersConfig.cpp
-	./application/src/extensions.cpp
 	./application/src/instance.cpp
 	./application/src/device.cpp
-	./application/src/queueFamilyIndices.cpp
 	./application/src/swapChain.cpp
 	./application/src/renderPass.cpp
-	./application/src/shaderManager.cpp
 	./application/src/pipeline.cpp
-	./application/src/vertex.cpp
 	./application/src/commandPool.cpp
-	./application/src/config.cpp
-	./application/src/bufferUtils.cpp
 	./application/src/mesh.cpp
-	./application/src/descriptorLayout.cpp
+	./application/src/descriptorManager.cpp
 	./application/src/uniformBuffers.cpp
 	./application/src/texture.cpp
-	./application/src/imageUtils.cpp
 )
 
 

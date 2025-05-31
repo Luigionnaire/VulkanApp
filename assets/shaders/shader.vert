@@ -17,15 +17,19 @@ layout(binding = 0) uniform UBO {
 } ubo;
 
 void main() {
-//    gl_Position = ubo.proj * ubo.view * ubo.model * vec4(tangent , 1.0);
-//    fragTexCoord = texCoord;
-//
+
     posInWS = (ubo.model * vec4(pos, 1.0)).xyz;
     gl_Position = ubo.proj * ubo.view * vec4(posInWS, 1.0);
-    norm = (ubo.model * vec4(normal, 0.0)).xyz;
+
+    // Transform normal and tangent with normalMatrix
+    vec3 T = normalize(vec3(ubo.model * vec4(tangent, 0.0)));
+    vec3 N = normalize(vec3(ubo.model * vec4(normal, 0.0)));
+
+    T = normalize(T - dot(T, N) * N); // Ensure T is orthogonal to N
+    vec3 B = normalize(cross(N, T));
+
+    norm = N;
     UV = texCoord;
-    vec3 T = (ubo.model * vec4(tangent, 0.0)).xyz;
-    vec3 B = cross(norm, T);
-    TBN = mat3(T, B, norm);
+    TBN = mat3(T, B, N);
 
 }
