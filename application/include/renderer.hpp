@@ -40,18 +40,6 @@ private:
 	std::shared_ptr<UniformBuffers> m_uniformBuffers; // uniform buffer object
 	std::shared_ptr<Texture> m_texture; // texture object
 
-	//const std::vector<Vertex> m_vertices = {
-	//{{-0.5f, -0.5f, 2.f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-	//{{0.5f, -0.5f, 0.f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-	//{{0.5f, 0.5f, 0.f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-	//{{-0.5f, 0.5f, 0.f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
-	//};
-
-	//const std::vector<uint16_t> m_indices = {
-	//	0, 1, 2,
-	//	2, 3, 0
-	//};
-
 	std::shared_ptr<Mesh> m_model;
 	//synchronization
 	std::vector<VkSemaphore> imageAvailableSemaphores;
@@ -100,7 +88,7 @@ private:
 
 		VkResult result = vkAcquireNextImageKHR(m_device->getDevice(), m_swapChain->getSwapChain(), UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex); // acquire the next image from the swapchain  !!memory access!! 
 		if (result == VK_ERROR_OUT_OF_DATE_KHR) { // check if the swapchain is out of date
-			m_swapChain->recreateSwapChain(m_window->getSurface(), m_commandPool->getCommandPool(), m_device->getGraphicsQueue()); // recreate the swapchain
+			windowResize(); // recreate the swapchain if the window was resized
 			return;
 		}
 		else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) { // check for errors
@@ -145,7 +133,8 @@ private:
 
 		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
 			framebufferResized = false;
-			m_swapChain->recreateSwapChain(m_window->getSurface(), m_commandPool->getCommandPool(), m_device->getGraphicsQueue());
+			//m_swapChain->recreateSwapChain(m_window->getSurface(), m_commandPool->getCommandPool(), m_device->getGraphicsQueue());
+			windowResize(); // recreate the swapchain if the window was resized
 		}
 		else if (result != VK_SUCCESS) {
 			throw std::runtime_error("failed to present swap chain image!");
@@ -223,6 +212,7 @@ private:
 		renderPassInfo.framebuffer = m_swapChain->getSwapChainFramebuffers()[imageIndex];
 		renderPassInfo.renderArea.offset = { 0, 0 };
 		renderPassInfo.renderArea.extent = swapChainExtent;
+
 		std::array<VkClearValue, 2> clearValues{}; // clear color
 		clearValues[0].color = { 0.012f, 0.018f, 0.02f, 1.0f }; // clear color
 		clearValues[1].depthStencil = { 1.0f, 0 }; // clear depth
@@ -263,5 +253,18 @@ private:
 		}
 	}
 
-
+	void windowResize() {
+		int width = 0, height = 0;
+		glfwGetFramebufferSize(m_window->getWindow(), &width, &height); // get the window size
+		while (width == 0 || height == 0) { // wait for the window to be resized
+			glfwGetFramebufferSize(m_window->getWindow(), &width, &height);
+			glfwWaitEvents();
+		}
+		vkDeviceWaitIdle(m_device->getDevice());
+		m_swapChain->cleanupSwapChain();
+		m_swapChain->createSwapChain(m_window->getSurface());
+		m_swapChain->createImageViews();
+		m_swapChain->createDepthResources(m_commandPool->getCommandPool(), m_device->getGraphicsQueue());
+		m_swapChain->createFrameBuffers(m_renderPass->getRenderPass(), m_swapChain->getDepthImageView());
+	}
 };

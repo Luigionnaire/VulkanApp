@@ -172,6 +172,10 @@ public:
 		vkDestroyPipeline(m_device, m_pipeline, nullptr);
 		vkDestroyPipelineLayout(m_device, m_pipelineLayout, nullptr);
 	}
+
+	void getUpdatedSwapChainExtent(VkExtent2D extent) {
+		m_swapChainExtent = extent;
+	}
 private:
 	VkPipeline m_pipeline;
 	VkPipelineLayout m_pipelineLayout;

@@ -147,22 +147,22 @@ public:
 		}
 	}
 
-	// window resize
-	void recreateSwapChain(VkSurfaceKHR surface, VkCommandPool commandPool, VkQueue queue) {
-		int width = 0, height = 0;
-		glfwGetFramebufferSize(m_window, &width, &height); // get the window size
-		while (width == 0 || height == 0) { // wait for the window to be resized
-			glfwGetFramebufferSize(m_window, &width, &height);
-			glfwWaitEvents();
-		}
-		vkDeviceWaitIdle(m_device);
+	//// window resize
+	//void recreateSwapChain(VkSurfaceKHR surface, VkCommandPool commandPool, VkQueue queue) {
+	//	int width = 0, height = 0; // for minimised window
+	//	glfwGetFramebufferSize(m_window, &width, &height); // get the window size
+	//	while (width == 0 || height == 0) { // wait for the window to be resized
+	//		glfwGetFramebufferSize(m_window, &width, &height);
+	//		glfwWaitEvents();
+	//	}
+	//	vkDeviceWaitIdle(m_device);
 
-		cleanupSwapChain();
-		createSwapChain(surface);
-		createImageViews();
-		createDepthResources(commandPool, queue);
-		createFrameBuffers(m_renderPass, m_depthImageView);
-	}
+	//	cleanupSwapChain();
+	//	createSwapChain(surface);
+	//	createImageViews();
+	//	createDepthResources(commandPool, queue);
+	//	createFrameBuffers(m_renderPass, m_depthImageView);
+	//}
 
 	VkSwapchainKHR getSwapChain() {
 		return m_swapChain;
