@@ -15,10 +15,10 @@
 #include "pipeline.hpp"
 #include "commandPool.hpp"
 #include "mesh.hpp"
-#include "descriptorLayout.hpp"
+#include "descriptorManager.hpp"
 #include "uniformBuffers.hpp"
 #include "texture.hpp"
-
+#include "model.hpp"
 
 class Renderer {
 public:
@@ -40,6 +40,12 @@ private:
 	std::shared_ptr<UniformBuffers> m_uniformBuffers; // uniform buffer object
 	std::shared_ptr<Texture> m_texture; // texture object
 
+	std::shared_ptr<Texture> m_textureColour; 
+	std::shared_ptr<Texture> m_textureMetallic; 
+	std::shared_ptr<Texture> m_textureNormal; 
+	std::shared_ptr<Texture> m_textureRoughness;
+
+	std::shared_ptr<Model> m_modelPBR;
 	std::shared_ptr<Mesh> m_model;
 	//synchronization
 	std::vector<VkSemaphore> imageAvailableSemaphores;
@@ -63,13 +69,19 @@ private:
 		m_descriptorManager = std::make_shared<DescriptorManager>(m_device->getDevice(), m_uniformBuffers->getUniformBuffers());
 		m_pipeline = std::make_shared<Pipeline>(m_renderPass->getRenderPass(), m_device->getDevice(), m_swapChain->getSwapChainExtent(), m_swapChain->getSwapChainImageViews(), m_descriptorManager->getDescriptorSetLayout()); // create a pipeline object
 		m_commandPool = std::make_shared<CommandPool>(m_device->getDevice(), m_device->getPhysicalDevice(), m_window->getSurface()); // create a command pool object
-		//createDepthResources();
 		m_swapChain->createDepthResources(m_commandPool->getCommandPool(), m_device->getGraphicsQueue());
 		m_swapChain->createFrameBuffers(m_renderPass->getRenderPass(), m_swapChain->getDepthImageView());
-		m_texture = std::make_shared<Texture>(m_device->getDevice(), m_device->getPhysicalDevice(), m_commandPool->getCommandPool(), m_device->getGraphicsQueue()); // create a texture object
-		m_descriptorManager->createDescriptorSets(m_texture->getTextureImageView(), m_texture->getTextureSampler()); // find a better solution ( sending texture to shaders)
-		m_model = std::make_shared<Mesh>(m_device->getDevice(), m_device->getPhysicalDevice(), m_commandPool->getCommandPool(), m_device->getGraphicsQueue(), "./assets/models/Barrel.obj");
 		createSyncObjects();
+		m_modelPBR = std::make_shared<Model>(m_device->getDevice(), m_device->getPhysicalDevice(), m_commandPool->getCommandPool(), m_device->getGraphicsQueue(), "./assets/models/Barrel.obj", "./assets/textures/barrel_BaseColor.png");
+		
+		m_modelPBR->loadTextures({
+			"./assets/textures/barrel_BaseColor.png", // Base Color
+			"./assets/textures/barrel_Metallic.png", // Metallic
+			"./assets/textures/barrel_Normal.png", // Normal
+			"./assets/textures/barrel_Roughness.png" // Roughness
+			});
+
+		m_descriptorManager->createDescriptorSets(m_modelPBR->getImageViews(), m_modelPBR->getSamplers()); // sending texture to shaders
 	}
 	void mainLoop() {
 		// Main loop
@@ -133,7 +145,6 @@ private:
 
 		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || framebufferResized) {
 			framebufferResized = false;
-			//m_swapChain->recreateSwapChain(m_window->getSurface(), m_commandPool->getCommandPool(), m_device->getGraphicsQueue());
 			windowResize(); // recreate the swapchain if the window was resized
 		}
 		else if (result != VK_SUCCESS) {
@@ -151,11 +162,9 @@ private:
 	// cleanup functions
 	void cleanup() {
 		m_swapChain->cleanupSwapChain();
-
-		m_texture->destroyTexture(); // destroy texture
 		m_uniformBuffers->destroyUniformBuffers();
 		m_descriptorManager->destroyDescriptorManager();
-		m_model->freeMemory();
+		m_modelPBR->destroyModel(); // destroy model
 		m_pipeline->destroyPipeline();
 		vkDestroyRenderPass(m_device->getDevice(), m_renderPass->getRenderPass(), nullptr);
 		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) // cleanup semaphores and fences
@@ -240,12 +249,12 @@ private:
 		vkCmdSetScissor(commandBuffer, 0, 1, &scissor); // set the scissor
 
 		////BUFFERS
-		m_model->bindBuffers(commandBuffer); // bind the buffers
+		m_modelPBR->bind(commandBuffer); // bind the buffers
 
 		//DESCRIPTOR SETS
 		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->getPipelineLayout(), 0, 1, &m_descriptorManager->getDescriptorSet(currentFrame), 0, nullptr); // bind the descriptor sets
 
-		m_model->draw(commandBuffer); // draw the triangle
+		m_modelPBR->draw(commandBuffer); // draw the triangle
 
 		vkCmdEndRenderPass(commandBuffer); // end render pass
 		if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {

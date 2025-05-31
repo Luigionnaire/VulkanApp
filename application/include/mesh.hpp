@@ -18,32 +18,7 @@ public:
 		m_graphicsQueue(graphicsQueue)
 	{
 		loadModel(path);
-		//m_vertices = {
-		//	// pos                 // normal             // texCoord
-		//	{{-0.5f, -0.5f, -0.5f}, {-1, -1, -1}, {0.0f, 0.0f}}, // 0
-		//	{{ 0.5f, -0.5f, -0.5f}, { 1, -1, -1}, {1.0f, 0.0f}}, // 1
-		//	{{ 0.5f,  0.5f, -0.5f}, { 1,  1, -1}, {1.0f, 1.0f}}, // 2
-		//	{{-0.5f,  0.5f, -0.5f}, {-1,  1, -1}, {0.0f, 1.0f}}, // 3
-		//	{{-0.5f, -0.5f,  0.5f}, {-1, -1,  1}, {0.0f, 0.0f}}, // 4
-		//	{{ 0.5f, -0.5f,  0.5f}, { 1, -1,  1}, {1.0f, 0.0f}}, // 5
-		//	{{ 0.5f,  0.5f,  0.5f}, { 1,  1,  1}, {1.0f, 1.0f}}, // 6
-		//	{{-0.5f,  0.5f,  0.5f}, {-1,  1,  1}, {0.0f, 1.0f}}, // 7
-		//};
 
-		//m_indices = {
-		//	// Front (+Z)
-		//	4, 5, 6, 6, 7, 4,
-		//	// Back (-Z)
-		//	1, 0, 3, 3, 2, 1,
-		//	// Left (-X)
-		//	0, 4, 7, 7, 3, 0,
-		//	// Right (+X)
-		//	5, 1, 2, 2, 6, 5,
-		//	// Top (+Y)
-		//	3, 7, 6, 6, 2, 3,
-		//	// Bottom (-Y)
-		//	0, 1, 5, 5, 4, 0
-		//};
 		BufferUtils::createVertexBuffer(m_device, m_physicalDevice, m_commandPool, m_graphicsQueue, m_vertices, m_vertexBuffer, m_vertexBufferMemory);
 		BufferUtils::createIndexBuffer(m_device, m_physicalDevice, m_commandPool, m_graphicsQueue, m_indices, m_indexBuffer, m_indexBufferMemory);
 	}
@@ -71,6 +46,7 @@ public:
 	}
 
 
+
 private:
 	VkDevice m_device;
 	VkPhysicalDevice m_physicalDevice;
@@ -88,7 +64,7 @@ private:
 
 	void loadModel(const std::string& path) {
 		Assimp::Importer importer;
-		const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs);
+		const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
 		if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
 			throw std::runtime_error("Failed to load model: " + std::string(importer.GetErrorString()));
 		}
@@ -133,6 +109,17 @@ private:
 			}
 			else {
 				vertex.texCoord = { 0.0f, 0.0f };
+			}
+
+			if (mesh->HasTangentsAndBitangents()) {
+				vertex.tangent = {
+					mesh->mTangents[i].x,
+					mesh->mTangents[i].y,
+					mesh->mTangents[i].z
+				};
+			}
+			else {
+				vertex.tangent = glm::vec3(0.0f, 0.0f, 0.0f); // fallback tangent
 			}
 
 			m_vertices.push_back(vertex);

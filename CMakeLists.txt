@@ -22,10 +22,11 @@ set (PROJECT_HEADER_FILES
 	./application/include/config.hpp
 	./application/include/bufferUtils.hpp
 	./application/include/mesh.hpp
-	./application/include/descriptorLayout.hpp
+	./application/include/descriptorManager.hpp
 	./application/include/uniformBuffers.hpp
 	./application/include/texture.hpp
 	./application/include/imageUtils.hpp
+	./application/include/model.hpp
 
 )
 set (PROJECT_SOURCE_FILES

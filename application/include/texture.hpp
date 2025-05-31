@@ -7,7 +7,9 @@
 class Texture {
 
 	public:
-		Texture(VkDevice device, VkPhysicalDevice physicalDevice, VkCommandPool commandPool, VkQueue queue) : m_device(device), m_physicalDevice(physicalDevice), m_commandPool(commandPool), m_queue(queue) {
+		Texture() = default; // default constructor
+
+		Texture(VkDevice device, VkPhysicalDevice physicalDevice, VkCommandPool commandPool, VkQueue queue, const char* path) : m_device(device), m_physicalDevice(physicalDevice), m_commandPool(commandPool), m_queue(queue), m_texturePath(path) {
 			createTextureImage();
 			createTextureImageView();
 			createTextureSampler();
@@ -32,6 +34,7 @@ class Texture {
 		VkCommandPool m_commandPool;
 		VkQueue m_queue;
 
+		const char* m_texturePath;
 
 		VkImage m_textureImage;
 		VkDeviceMemory m_textureImageMemory;
@@ -41,7 +44,7 @@ class Texture {
 
 		void createTextureImage() {
 			int texWidth, texHeight, texChannels;
-			stbi_uc* pixels = stbi_load("./assets/textures/barrel_BaseColor.png", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha); // TODO take this from constructor
+			stbi_uc* pixels = stbi_load(m_texturePath, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha); // TODO take this from constructor
 			VkDeviceSize imageSize = texWidth * texHeight * 4;
 
 			if (!pixels) {
