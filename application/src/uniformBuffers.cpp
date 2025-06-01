@@ -20,8 +20,8 @@ void UniformBuffers::updateUniformBuffer(uint32_t currentImage, VkExtent2D swapC
 	auto currentTime = std::chrono::high_resolution_clock::now(); // current time
 	float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count(); // time since start
 	ubo.model = glm::mat4(1.0f); // initialize model matrix to identity
-	ubo.model = glm::rotate(ubo.model, time * glm::radians(10.f), glm::vec3(0.0f, 1.0f, 0.0f)); // rotate the model based on timeu		
-	ubo.view = glm::lookAt(glm::vec3(0.0f, 1.5f, -3.f), glm::vec3(0.0f, -2.0f, 10.0f), glm::vec3(0.0f, 1.f, 0.0f));
+	ubo.model = glm::rotate(ubo.model, time * glm::radians(20.f), glm::vec3(1.0f, 1.0f, 1.0f)); // rotate the model based on timeu		
+	ubo.view = glm::lookAt(glm::vec3(0.0f, 1.0f, -3.f), glm::vec3(0.0f, -2.0f, 10.0f), glm::vec3(0.0f, 1.f, 0.0f));
 	ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
 	ubo.proj[1][1] *= -1; // flip the y axis because openGL standards in glm
 	memcpy(m_uniformBuffersMapped[currentImage], &ubo, sizeof(ubo)); // copy the data to the buffer

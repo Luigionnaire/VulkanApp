@@ -6,8 +6,7 @@ Model::Model(VkDevice device,
     VkPhysicalDevice physicalDevice,
     VkCommandPool commandPool,
     VkQueue graphicsQueue,
-    const std::string& modelPath,
-    const char* texturePath)
+    const std::string& modelPath)
     : m_device(device),
     m_physicalDevice(physicalDevice),
     m_commandPool(commandPool),

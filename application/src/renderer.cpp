@@ -20,7 +20,7 @@ void Renderer::initVulkan() {
 	m_swapChain->createDepthResources(m_commandPool->getCommandPool(), m_device->getGraphicsQueue());
 	m_swapChain->createFrameBuffers(m_renderPass->getRenderPass(), m_swapChain->getDepthImageView());
 	createSyncObjects();
-	m_modelPBR = std::make_shared<Model>(m_device->getDevice(), m_device->getPhysicalDevice(), m_commandPool->getCommandPool(), m_device->getGraphicsQueue(), "./assets/models/Barrel.obj", "./assets/textures/barrel_BaseColor.png");
+	m_modelPBR = std::make_shared<Model>(m_device->getDevice(), m_device->getPhysicalDevice(), m_commandPool->getCommandPool(), m_device->getGraphicsQueue(), "./assets/models/barrel.obj");
 
 	m_modelPBR->loadTextures({
 		"./assets/textures/barrel_BaseColor.png", // Base Color

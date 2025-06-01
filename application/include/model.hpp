@@ -22,8 +22,7 @@ public:
         VkPhysicalDevice physicalDevice,
         VkCommandPool commandPool,
         VkQueue graphicsQueue,
-        const std::string& modelPath,
-        const char* texturePath);
+        const std::string& modelPath);
     
     /**
      * @brief Loads up to 4 textures from given file paths.

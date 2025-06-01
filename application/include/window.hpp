@@ -44,8 +44,8 @@ public:
 private:
     GLFWwindow* m_window;
 	VkSurfaceKHR m_surface = nullptr;
-    const uint32_t width = 800;
-    const uint32_t height = 600;
+    const uint32_t width = 1280;
+    const uint32_t height = 720;
     bool framebufferResized = false;
 
 };
