@@ -1,8 +1,10 @@
 How to build:
 
-Have the Vulkan SDK installed
-Have Cmake installed
+1. Have the Vulkan SDK installed.
 
-Run runCmake.bat file to build the solution.
+2. Have Cmake installed.
 
-sln file will be located in build folder.
+
+3. Run runCmake.bat file to build the solution.
+
+.sln file will be located in build folder.
