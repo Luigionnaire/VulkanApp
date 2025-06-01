@@ -3,13 +3,24 @@
 #include <vulkan/vulkan.h>
 #include <glm/glm.hpp>
 #include <array>
-
+/**
+ * @struct Vertex
+ * @brief Represents a single vertex with position, normal, texture coordinates, and tangent data.
+ *
+ * This struct is used to define the layout of vertex data passed to the vertex shader.
+ */
 struct Vertex {
-	glm::vec3 pos;
-	glm::vec3 normal;
-	glm::vec2 texCoord;
-	glm::vec3 tangent;
+	glm::vec3 pos; ///< Position of the vertex in 3D space.
+	glm::vec3 normal; ///< Normal vector for lighting calculations.
+	glm::vec2 texCoord; ///< Texture coordinates for mapping textures onto the geometry.
+	glm::vec3 tangent; ///< Tangent vector for normal mapping, used in PBR lighting calculations.
 
+	/**
+	 * @brief Returns the vertex input binding description.
+	 *
+	 * Describes how data is read from the vertex buffer.
+	 * @return A VkVertexInputBindingDescription struct.
+	 */
 	static VkVertexInputBindingDescription getBindingDescription() {
 		VkVertexInputBindingDescription bindingDescription{};
 		bindingDescription.binding = 0;
@@ -17,6 +28,12 @@ struct Vertex {
 		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX; // move to next data entry after each vertex
 		return bindingDescription;
 	}
+	/**
+	 * @brief Returns the vertex input attribute descriptions.
+	 *
+	 * Maps vertex data to shader input locations.
+	 * @return An array of VkVertexInputAttributeDescription structs.
+	 */
 	static std::array<VkVertexInputAttributeDescription, 4> getAttributeDescriptions() {
 		std::array<VkVertexInputAttributeDescription, 4> attributeDescriptions{}; // two because we are passing a vec2 and a vec3
 		attributeDescriptions[0].binding = 0;

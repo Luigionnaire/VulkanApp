@@ -7,9 +7,18 @@
 #include <iostream>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-
+/**
+ * @namespace Extensions
+ * @brief Contains utility functions for handling Vulkan instance and device extensions.
+ */
 namespace Extensions {
-
+	/**
+	* @brief Retrieves the required Vulkan instance extensions.
+	*
+	* Includes GLFW-required extensions and the debug utils extension if validation layers are enabled.
+	*
+	* @return A vector of required instance extension names.
+	*/
 	static std::vector<const char*> getRequiredExtensions() { // debug messenger extension  
 		uint32_t glfwExtensionCount = 0;
 		const char** glfwExtensions;
@@ -22,7 +31,13 @@ namespace Extensions {
 		}
 		return extensions;
 	}
-
+	/**
+	 * @brief Checks if a physical device supports all required device extensions.
+	 *
+	 * @param device The Vulkan physical device to check.
+	 * @param deviceExtensions A list of required device extensions.
+	 * @return true if all required extensions are supported; false otherwise.
+	 */
 	static bool checkDeviceExtensionSupport(VkPhysicalDevice device, std::vector<const char*> deviceExtensions) {
 		uint32_t extensionCount;
 		vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);

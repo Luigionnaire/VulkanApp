@@ -8,6 +8,7 @@ RenderPass::RenderPass(VkDevice device, VkFormat swapChainImageFormat, VkFormat 
 }
 
 void RenderPass::createRenderPass() {
+
 	VkFormat swapChainImageFormat = m_swapChainImageFormat;
 	VkAttachmentDescription colorAttachment{};
 	colorAttachment.format = swapChainImageFormat;

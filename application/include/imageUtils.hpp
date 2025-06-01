@@ -2,7 +2,22 @@
 
 #include <vulkan/vulkan.h>
 #include "bufferUtils.hpp"
+/**
+ * @namespace ImageUtils
+ * @brief Provides helper functions for creating Vulkan images and image views.
+ */
 namespace ImageUtils {
+
+	/**
+	 * @brief Creates a 2D image view for the given image.
+	 *
+	 * @param device The logical Vulkan device.
+	 * @param image The Vulkan image to create a view for.
+	 * @param format The format of the image.
+	 * @param aspectFlags Aspect mask specifying which part of the image to access.
+	 * @return A handle to the created VkImageView.
+	 * @throws std::runtime_error if image view creation fails.
+	 */
 	static VkImageView createImageView(VkDevice device, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags) {
 		VkImageViewCreateInfo viewInfo{};
 		viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -22,7 +37,21 @@ namespace ImageUtils {
 
 		return imageView;
 	}
-
+	/**
+	 * @brief Creates a 2D Vulkan image and allocates memory for it.
+	 *
+	 * @param device The logical Vulkan device.
+	 * @param physicalDevice The physical device used to find a suitable memory type.
+	 * @param width Image width.
+	 * @param height Image height.
+	 * @param format Image format.
+	 * @param tiling Image tiling mode.
+	 * @param usage Usage flags for the image.
+	 * @param properties Memory properties for allocation.
+	 * @param image Reference to VkImage to store the created image handle.
+	 * @param imageMemory Reference to VkDeviceMemory to store the allocated memory.
+	 * @throws std::runtime_error if image creation or memory allocation fails.
+	 */
 	static void createImage(VkDevice device, VkPhysicalDevice physicalDevice, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory) {
 		VkImageCreateInfo imageInfo{};
 		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;

@@ -5,9 +5,18 @@
 #include <stdexcept>
 #include "vertex.hpp"
 
+/**
+ * @brief Utility namespace for Vulkan buffer and memory operations.
+ */
 namespace BufferUtils {
 
-
+	/**
+   * @brief Begins recording a single-use command buffer.
+   *
+   * @param device The Vulkan logical device.
+   * @param commandPool The command pool to allocate from.
+   * @return VkCommandBuffer A command buffer ready for recording.
+   */
 	static  VkCommandBuffer beginSingleTimeCommands(VkDevice device, VkCommandPool commandPool) {
 		VkCommandBufferAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -26,7 +35,14 @@ namespace BufferUtils {
 
 		return commandBuffer;
 	}
-
+	/**
+	 * @brief Ends recording and submits a single-use command buffer.
+	 *
+	 * @param device The Vulkan logical device.
+	 * @param commandBuffer The command buffer to end and submit.
+	 * @param queue The queue to submit the command buffer to.
+	 * @param commandPool The command pool to free the buffer from.
+	 */
 	static void endSingleTimeCommands(VkDevice device, VkCommandBuffer commandBuffer, VkQueue queue, VkCommandPool commandPool) {
 		vkEndCommandBuffer(commandBuffer);
 
@@ -40,7 +56,16 @@ namespace BufferUtils {
 
 		vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
 	}
-
+	/**
+	* @brief Copies data from one buffer to another.
+	*
+	* @param device The Vulkan logical device.
+	* @param commandPool The command pool used for the transfer command.
+	* @param queue The queue to submit the transfer.
+	* @param srcBuffer The source buffer.
+	* @param dstBuffer The destination buffer.
+	* @param size The number of bytes to copy.
+	*/
 	static void copyBuffer(VkDevice device, VkCommandPool commandPool, VkQueue queue, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
 		
 		VkCommandBuffer commandBuffer = beginSingleTimeCommands(device, commandPool);
@@ -52,7 +77,15 @@ namespace BufferUtils {
 		endSingleTimeCommands(device, commandBuffer, queue, commandPool);
 
 	}
-
+	/**
+	 * @brief Finds a suitable memory type based on requirements.
+	 *
+	 * @param physicalDevice The Vulkan physical device.
+	 * @param typeFilter Bitfield of acceptable memory types.
+	 * @param properties Desired memory properties (e.g. host-visible).
+	 * @return uint32_t The index of the suitable memory type.
+	 * @throws std::runtime_error If no suitable memory type is found.
+	 */
 	static uint32_t findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties) {
 		VkPhysicalDeviceMemoryProperties memProperties;
 		vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties); // get the memory properties
@@ -64,7 +97,17 @@ namespace BufferUtils {
 		}
 		throw std::runtime_error("failed to find suitable memory type!"); // throw an error
 	}
-
+	/**
+	 * @brief Creates a Vulkan buffer and allocates memory for it.
+	 *
+	 * @param device Logical device.
+	 * @param physicalDevice Physical device for memory info.
+	 * @param size Size of the buffer.
+	 * @param usage Buffer usage flags.
+	 * @param properties Desired memory properties.
+	 * @param buffer Output: created buffer.
+	 * @param bufferMemory Output: allocated memory for the buffer.
+	 */
 	static void createBuffer(VkDevice device, VkPhysicalDevice physicalDevice, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) { // create buffer depending on usage
 		VkBufferCreateInfo bufferInfo{};
 		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -88,14 +131,23 @@ namespace BufferUtils {
 			throw std::runtime_error("failed to allocate vertex buffer memory!");
 		}
 
-		//vkBindBufferMemory(device, buffer, bufferMemory, 0);  // last parameter is offset
 		if (vkBindBufferMemory(device, buffer, bufferMemory, 0) != VK_SUCCESS) {
 			throw std::runtime_error("failed to bind buffer memory!");
 		}
 	}
 
 
-	// geometry
+	/**
+	* @brief Creates a GPU vertex buffer and uploads vertex data to it.
+	*
+	* @param device Logical device.
+	* @param physicalDevice Physical device.
+	* @param commandPool Command pool for staging commands.
+	* @param queue Graphics queue.
+	* @param vertices Vertex data.
+	* @param buffer Output: vertex buffer.
+	* @param bufferMemory Output: memory for vertex buffer.
+	*/
 	static void createVertexBuffer(VkDevice device, VkPhysicalDevice physicalDevice, VkCommandPool commandPool, VkQueue queue, const std::vector<Vertex> vertices, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
 		VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
@@ -116,6 +168,17 @@ namespace BufferUtils {
 		vkFreeMemory(device, stagingBufferMemory, nullptr);
 
 	}
+	/**
+  * @brief Creates a GPU index buffer and uploads index data to it.
+  *
+  * @param device Logical device.
+  * @param physicalDevice Physical device.
+  * @param commandPool Command pool for staging commands.
+  * @param queue Graphics queue.
+  * @param indices Index data.
+  * @param buffer Output: index buffer.
+  * @param bufferMemory Output: memory for index buffer.
+  */
 	static void createIndexBuffer(VkDevice device, VkPhysicalDevice physicalDevice, VkCommandPool commandPool, VkQueue queue, const std::vector<uint16_t> indices, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
 		VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
 
@@ -135,10 +198,29 @@ namespace BufferUtils {
 		vkDestroyBuffer(device, stagingBuffer, nullptr);
 		vkFreeMemory(device, stagingBufferMemory, nullptr);
 	}
+	/**
+	 * @brief Checks if a Vulkan format includes a stencil component.
+	 *
+	 * @param format Vulkan image format.
+	 * @return true If the format includes stencil.
+	 * @return false Otherwise.
+	 */
 	static bool hasStencilComponent(VkFormat format) {
 		return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
 	}
 	
+	/**
+	 * @brief Transitions an image layout using a pipeline barrier.
+	 *
+	 * @param device Logical device.
+	 * @param commandPool Command pool.
+	 * @param queue Graphics queue.
+	 * @param image Target Vulkan image.
+	 * @param format Format of the image.
+	 * @param oldLayout Current image layout.
+	 * @param newLayout Desired image layout.
+	 * @throws std::invalid_argument If transition combination is unsupported.
+	 */
 	static void transitionImageLayout(VkDevice device, VkCommandPool commandPool, VkQueue queue, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) {
 		VkCommandBuffer commandBuffer = beginSingleTimeCommands(device, commandPool);
 
@@ -204,6 +286,17 @@ namespace BufferUtils {
 
 	}
 
+	/**
+	* @brief Copies buffer data into a Vulkan image.
+	*
+	* @param device Logical device.
+	* @param commandPool Command pool.
+	* @param queue Graphics queue.
+	* @param buffer Source buffer.
+	* @param image Target image.
+	* @param width Width of the image.
+	* @param height Height of the image.
+	*/
 	static void copyBufferToImage(VkDevice device, VkCommandPool commandPool, VkQueue queue, VkBuffer buffer, VkImage image, uint32_t width, uint32_t height)
 	{
 		VkCommandBuffer commandBuffer = beginSingleTimeCommands(device, commandPool);

@@ -3,76 +3,58 @@
 #include "Mesh.hpp"
 #include "Texture.hpp"
 
-
+/**
+ * @class Model
+ * @brief Represents a 3D model composed of a mesh and multiple textures.
+ */
 class Model {
 public:
+    /**
+     * @brief Constructs a Model with mesh and a single texture.
+     * @param device Vulkan logical device.
+     * @param physicalDevice Vulkan physical device.
+     * @param commandPool Command pool for buffer/texture operations.
+     * @param graphicsQueue Queue for command submissions.
+     * @param modelPath Path to the model file.
+     * @param texturePath Path to the initial texture file.
+     */
     Model(VkDevice device,
         VkPhysicalDevice physicalDevice,
         VkCommandPool commandPool,
         VkQueue graphicsQueue,
         const std::string& modelPath,
-        const char* texturePath)
-        : m_device(device),
-		m_physicalDevice(physicalDevice),
-		m_commandPool(commandPool),
-		m_graphicsQueue(graphicsQueue),
-        m_mesh(device, physicalDevice, commandPool, graphicsQueue, modelPath),
-        m_texture(device, physicalDevice, commandPool, graphicsQueue, texturePath)
-    {
+        const char* texturePath);
+    
+    /**
+     * @brief Loads up to 4 textures from given file paths.
+     * @param texturePaths Array of 4 texture file paths.
+     */
+    void loadTextures(const std::array<const char*, 4>& texturePaths);
+    void destroyModel();
 
-    }
+    /**
+     * @brief Binds the mesh buffers to the given command buffer for rendering.
+     * @param commandBuffer Command buffer to record commands.
+     */
+    void bind(VkCommandBuffer commandBuffer);
 
-    void loadTextures(const std::array<const char*, 4>& texturePaths) {
-        for (size_t i = 0; i < 4; ++i) {
-            m_textures[i] = Texture(
-                m_device, m_physicalDevice, m_commandPool, m_graphicsQueue, texturePaths[i]
-            );
-        }
-    }
+    /**
+    * @brief Issues a draw call for the model's mesh.
+    * @param commandBuffer Command buffer to record draw commands.
+    */
+    void draw(VkCommandBuffer commandBuffer);
 
-    void destroyModel() {
-        m_mesh.freeMemory();
-        m_texture.destroyTexture();
-        for (auto& tex : m_textures) {
-            tex.destroyTexture();
-        }
-    }
+    /// Returns image views for the additional 4 textures.
+    std::array<VkImageView, 4> getImageViews() const;
 
-    void bind(VkCommandBuffer commandBuffer) {
-        m_mesh.bindBuffers(commandBuffer);
-    }
-
-    void draw(VkCommandBuffer commandBuffer) {
-        m_mesh.draw(commandBuffer);
-    }
-
-    VkImageView getImageView() const { return m_texture.getTextureImageView(); }
-    VkSampler getSampler() const { return m_texture.getTextureSampler(); }
-
-
-    std::array<VkImageView, 4> getImageViews() const {
-        std::array<VkImageView, 4> views{};
-        for (size_t i = 0; i < 4; ++i) {
-            views[i] = m_textures[i].getTextureImageView();
-        }
-        return views;
-    }
-
-    std::array<VkSampler, 4> getSamplers() const {
-        std::array<VkSampler, 4> samplers{};
-        for (size_t i = 0; i < 4; ++i) {
-            samplers[i] = m_textures[i].getTextureSampler();
-        }
-        return samplers;
-    }
-
+    /// Returns samplers for the additional 4 textures.
+    std::array<VkSampler, 4> getSamplers() const;
 private:
-    VkDevice m_device;
-    VkPhysicalDevice m_physicalDevice;
-    VkCommandPool m_commandPool;
-    VkQueue m_graphicsQueue;
+	VkDevice m_device; ///< Vulkan logical device.
+	VkPhysicalDevice m_physicalDevice; ///< Vulkan physical device.
+	VkCommandPool m_commandPool; ///< Command pool for buffer/texture operations.
+	VkQueue m_graphicsQueue; ///< Queue for command submissions.
 
-    Mesh m_mesh;
-	Texture m_texture;
-    std::array<Texture, 4> m_textures;
+	Mesh m_mesh; ///< Mesh representing the model.
+	std::array<Texture, 4> m_textures; ///< Array of textures associated with the model.
 };

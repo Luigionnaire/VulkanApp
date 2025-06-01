@@ -2,6 +2,8 @@
 
 #include "renderer.hpp"
 
+
+
 void Renderer::initWindow() {
 	m_window = std::make_shared<Window>(); // create a window object
 }
@@ -29,6 +31,7 @@ void Renderer::initVulkan() {
 
 	m_descriptorManager->createDescriptorSets(m_modelPBR->getImageViews(), m_modelPBR->getSamplers()); // sending texture to shaders
 }
+
 void Renderer::mainLoop() {
 	// Main loop
 	while (!glfwWindowShouldClose(m_window->getWindow())) {
@@ -105,6 +108,7 @@ void Renderer::update() {
 	// Update the uniform buffer
 	m_uniformBuffers->updateUniformBuffer(currentFrame, m_swapChain->getSwapChainExtent());
 }
+
 // cleanup functions
 void Renderer::cleanup() {
 	m_swapChain->cleanupSwapChain();
@@ -126,6 +130,7 @@ void Renderer::cleanup() {
 	glfwDestroyWindow(m_window->getWindow()); // Destroy window
 	glfwTerminate(); // Terminate GLFW
 }
+
 
 void Renderer::createSyncObjects() {
 	imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);

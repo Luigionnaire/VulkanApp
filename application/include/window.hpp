@@ -3,8 +3,15 @@
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan.h>
 
+/**
+ * @class Window
+ * @brief Manages GLFW window creation and Vulkan surface integration.
+ */
 class Window {
 public:
+    /**
+     * @brief Constructs and initializes a GLFW window.
+     */
     Window();
 
 	GLFWwindow* getWindow() {
@@ -19,8 +26,20 @@ public:
         auto appWindow = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
         appWindow->framebufferResized = true;
     }
+
+    /**
+ * @brief Creates a Vulkan surface for the GLFW window.
+ *
+ * @param instance The Vulkan instance used to create the surface.
+ * @throws std::runtime_error if surface creation fails.
+ */
     void createSurface(const VkInstance& instance);
 
+    /**
+ * @brief Destroys the Vulkan surface.
+ *
+ * @param instance The Vulkan instance used to destroy the surface.
+ */
     void destroySurface(const VkInstance& instance);
 private:
     GLFWwindow* m_window;

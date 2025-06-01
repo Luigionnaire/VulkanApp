@@ -5,7 +5,10 @@
 #include "validationLayersConfig.hpp"
 #include "debugManager.hpp"
 #include "extensions.hpp"
-
+/**
+ * @class VKInstance
+ * @brief Encapsulates Vulkan instance creation and destruction, including debug messenger setup.
+ */
 class VKInstance {
 
 public:
@@ -16,6 +19,6 @@ public:
 
 	const VkInstance& getInstance() const;
 private:
-	VkInstance m_instance;
-	VkDebugUtilsMessengerEXT m_debugMessenger;
+	VkInstance m_instance; ///< The Vulkan instance handle.
+	VkDebugUtilsMessengerEXT m_debugMessenger; ///< Debug messenger for validation layers.
 };

@@ -43,6 +43,7 @@ set (PROJECT_SOURCE_FILES
 	./application/src/descriptorManager.cpp
 	./application/src/uniformBuffers.cpp
 	./application/src/texture.cpp
+	./application/src/model.cpp
 )
 
 
@@ -148,3 +149,34 @@ set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(assimp)
 
 target_link_libraries(${APPLICATION_NAME} PRIVATE assimp)
+
+
+# ========== ImGui ===========
+#FetchContent_Declare(
+#  imgui
+#  GIT_REPOSITORY https://github.com/ocornut/imgui.git
+#  GIT_TAG master  # or pin to a specific tag/commit
+#)
+
+#FetchContent_MakeAvailable(imgui)
+
+# Create ImGui backend library
+#add_library(imgui_backend
+#    ${imgui_SOURCE_DIR}/imgui.cpp
+#    ${imgui_SOURCE_DIR}/imgui_draw.cpp
+ #   ${imgui_SOURCE_DIR}/imgui_tables.cpp
+ #   ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+ #   ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
+#    ${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp
+#)
+
+#target_include_directories(imgui_backend PUBLIC
+#    ${imgui_SOURCE_DIR}
+#    ${imgui_SOURCE_DIR}/backends
+#)
+
+# Link GLFW and Vulkan to ImGui backend
+#target_link_libraries(imgui_backend PUBLIC glfw Vulkan::Vulkan)
+
+# Link ImGui backend to your application
+#target_link_libraries(${APPLICATION_NAME} PRIVATE imgui_backend)

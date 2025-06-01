@@ -1,0 +1,1 @@
+call "./doc/bin/doxygen.exe" "./doc/Doxyfile"
